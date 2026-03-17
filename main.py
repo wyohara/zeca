@@ -18,6 +18,14 @@ def testando_embeding():
         saida_final = embeding.backward(X, Y)
         embeding.gerar_loss(saida_final, Y)
 
+
+def get_livro_teste():
+    f = open("teste_e_relatorios/tokenizador/livro_teste.txt", "r",encoding="utf-8")
+    texto = f.read()
+    f.close()
+    return texto
+
+
 if __name__ == "__main__":
     tkr = Tokenizador()
     tkr.gerar_tokenizador()
@@ -30,3 +38,9 @@ if __name__ == "__main__":
     print(arr)
     rev_tokens = tkr.transformar_tokens_em_texto(tokens)
     print("Tokens reverso: ", rev_tokens)
+
+    relatorio = tkr.relatorio(get_livro_teste(),tkr.gerar_tokenizador())
+    relatorio.get_total_tokens_palavra()
+    relatorio.get_total_tokens_unicos()
+    relatorio.get_entropia_dos_tokens()
+    relatorio.get_curva_vocabulario()
