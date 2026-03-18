@@ -29,18 +29,5 @@ def get_livro_teste():
 if __name__ == "__main__":
     tkr = Tokenizador()
     tkr.gerar_tokenizador()
-    tkr.processar_dataset_textos()
-    tokens = tkr.transformar_texto_em_tokens("Primeiro teste")
-    print("tokens: ", tokens)
-    arr = tkr.transformar_tokens_em_array(tokens,True)
-    print(arr)
-    arr = tkr.transformar_tokens_em_array(tokens,False)
-    print(arr)
-    rev_tokens = tkr.transformar_tokens_em_texto(tokens)
-    print("Tokens reverso: ", rev_tokens)
-
-    relatorio = tkr.relatorio(get_livro_teste(),tkr.gerar_tokenizador())
-    relatorio.get_total_tokens_palavra()
-    relatorio.get_total_tokens_unicos()
-    relatorio.get_entropia_dos_tokens()
-    relatorio.get_curva_vocabulario()
+    tkr.processar_dataset_textos(formato="hex")
+  
