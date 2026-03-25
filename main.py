@@ -35,3 +35,4 @@ if __name__ == "__main__":
     print('tokens ',res)
     rev_res = tkr.transformar_tokens_em_texto(res,gerar_texto=True)
     print(rev_res)
+    print('fim')
