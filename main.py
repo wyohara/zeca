@@ -1,7 +1,9 @@
 import numpy as np
 
-from lib.tokenizador.tokenizador import Tokenizador
+from lib.tokenizador.modulos.controlador_tokenizador import ControladorTokenizador
+from lib.tokenizador.modulos.processamento_texto_trie import ProcessamentoTextoTrie
 from lib.embeding.embeding import Embeding
+from lib.tokenizador.tokenizador import Tokenizador
 
 def testando_embeding():
     X = np.array([[1., 0., 1.],  [0., 1., 0.],  [1., 1., 1.]])
@@ -28,6 +30,8 @@ def get_livro_teste():
 
 if __name__ == "__main__":
     tkr = Tokenizador()
-    tkr.gerar_tokenizador()
-    tkr.processar_dataset_textos(formato="hex")
-  
+    tkr.processar_dataset_textos()
+    res = tkr.transformar_texto_em_tokens("oi tudo bem como vai?")
+    print('tokens ',res)
+    rev_res = tkr.transformar_tokens_em_texto(res,gerar_texto=True)
+    print(rev_res)
