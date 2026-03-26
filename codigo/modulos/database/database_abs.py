@@ -24,8 +24,9 @@ class DatabaseABS(ABC):
     _db_instance = None
     
     def __init__(self, modo_teste:bool):
+        self.__modo_teste = modo_teste
         if DatabaseABS._db_instance is None:
-            if modo_teste:
+            if self.__modo_teste:
                 DatabaseABS._db_instance = sqlite3.connect(":memory:")
             else:
                 DatabaseABS._db_instance = sqlite3.connect("modulos/database.db")

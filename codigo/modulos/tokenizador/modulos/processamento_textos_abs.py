@@ -14,7 +14,7 @@ class ProcessamentoDeTextoABS(ABC):
         - controle dos textos lidos
         - salvamento do token no banco de dados
         """
-        self.__db = DatabaseArquivosTextos()
+        self.__db_textos = DatabaseArquivosTextos()
         self.__db_token = DatabaseTokens()
         self._ferramentas = FerramentasTokenizador()
         self.__dataset = Path(__file__).parent / "dataset"
@@ -55,7 +55,7 @@ class ProcessamentoDeTextoABS(ABC):
     
     def __is_texto_processado(self, name, modelo_processamento) -> bool:
         #Verifica se o texto já foi processado para o numero de bytes definidos
-        texto = self.__db.get_texto_processado(name, modelo_processamento)
+        texto = self.__db_textos.get_texto_processado(name, modelo_processamento)
         if texto is None:
             return False
         else:
@@ -65,6 +65,6 @@ class ProcessamentoDeTextoABS(ABC):
         # cria o objeto de manipulação de texto e verifica, se existir atualiza, senão salva
         arq_texto = ArquivoTextoObject(nome=nome_arquivo, descricao=descricao, modelo_processamento=modelo_processamento)
         
-        texto = self.__db.get_texto_processado(nome_arquivo, self._modelo_processamento)
+        texto = self.__db_textos.get_texto_processado(nome_arquivo, self._modelo_processamento)
         if texto is None:
-            self.__db.set_arquivo_processado(arq_texto)
+            self.__db_textos.set_arquivo_processado(arq_texto)

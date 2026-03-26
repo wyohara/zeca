@@ -1,6 +1,70 @@
 from modulos.database.db_arquivos_textos import DatabaseArquivosTextos, ArquivoTextoObject
 from modulos.database.db_tokens import DatabaseTokens, TokenObject
 from modulos.tokenizador.modulos import processamento_texto_trie
+from modulos.database.database_abs import DatabaseABS
+import unittest
+import sys
+
+
+class TesteDatabaseArquivoTextos(unittest.TestCase):
+    def __init__(self, methodName = "runTest"):
+        super().__init__(methodName)
+
+
+    def setUp(self):
+        "Configurando o ambiente de teste"
+        self.CLASSE_TESTADA = DatabaseArquivosTextos(modo_teste=True)
+
+   
+    def tearDown(self):
+        DatabaseABS._db_instance = None
+
+    def teste_1(self):
+        '''Testa se o teste iniciou corretamente'''
+        self.assertIsNotNone(self.CLASSE_TESTADA)
+        self.assertTrue(self.CLASSE_TESTADA._DatabaseABS__modo_teste)
+
+    def teste_2(self):
+        '''Testa se a classe insere com sucesso um objeto válido'''
+        arq = ArquivoTextoObject(0,'tk1','','trie')
+        resultado = self.CLASSE_TESTADA.set_arquivo_processado(arq)
+        self.assertEqual(resultado, 1)
+
+    def teste_3(self):
+        '''Testa se a classe insere com sucesso um objeto válido'''
+        arq = ArquivoTextoObject(0,'tk1','','trie')
+        resultado = self.CLASSE_TESTADA.set_arquivo_processado(arq)
+        self.assertEqual(resultado, 1)
+
+    def teste_4(self):
+        '''Testa se a classe não permite salvar objeto com id'''
+        arq = ArquivoTextoObject(id=1,nome='tk1',descricao='',modelo_processamento='trie')
+        resultado = self.CLASSE_TESTADA.set_arquivo_processado(arq)
+        self.assertEqual(resultado, 0)
+
+    def teste_5(self):
+        '''Testa se a classe não permite salvar nome vazio'''
+        arq = ArquivoTextoObject(id=0,nome='',descricao='',modelo_processamento='trie')
+        resultado = self.CLASSE_TESTADA.set_arquivo_processado(arq)
+        self.assertEqual(resultado,-1)
+    
+    def teste_6(self):
+        '''Testa se a classe não permite salvar nome com modelo_processamento vazio'''
+        arq = ArquivoTextoObject(id=0,nome='tk1',descricao='',modelo_processamento='')
+        resultado = self.CLASSE_TESTADA.set_arquivo_processado(arq)
+        self.assertEqual(resultado,-1)
+
+
+def teste_processamento_texto_db():
+     # Carrega todos os testes
+    test_suite = unittest.TestLoader().loadTestsFromTestCase(TesteDatabaseArquivoTextos)
+    # Executa os testes com verbosidade
+    test_runner = unittest.TextTestRunner(verbosity=2)
+    result = test_runner.run(test_suite)
+    
+    # Retorna código de saída apropriado
+    sys.exit(0 if result.wasSuccessful() else 1)
+
 
 class TesteDatabase():
 
@@ -9,21 +73,9 @@ class TesteDatabase():
         print("-----------"*10)
         print("Testando DatabaseArquivosTextos")
         print("     TESTE DE INSERÇÃO")
-        print (">> Teste inserindo arquivo válido")
-        resultado = db.set_arquivo_processado(ArquivoTextoObject(0,'tk1','','trie'))
-        assert resultado is not None
-        assert resultado > 0
-        print(f' >>> OK: {resultado}')
 
-        print (">> [erro de integridade] - inserindo arquivo com id ")
-        resultado = db.set_arquivo_processado(ArquivoTextoObject(12,'tk1','','trie'))
-        assert resultado is -1
-        print(f' >>> OK: {resultado}')
         
-        print (">> [erro de integridade] - inserindo arquivo com nome vazio ")
-        resultado = db.set_arquivo_processado(ArquivoTextoObject(12,'','','trie'))
-        assert resultado is -1
-        print(f' >>> OK {resultado}')
+
 
         print (">> [erro de integridade] - inserindo arquivo com modo de processamento vazio ")
         resultado = db.set_arquivo_processado(ArquivoTextoObject(12,'','','trie'))

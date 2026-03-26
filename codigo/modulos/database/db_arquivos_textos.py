@@ -66,7 +66,7 @@ class DatabaseArquivosTextos(DatabaseABS):
             
             # caso insira um arquivo com id ocorre erro de integridade
             if arq_texto.id >0:
-                raise ValueError
+                raise sqlite3.IntegrityError
             
             # validando os campos de nome e arquivo processado
             if not(arq_texto.validar_nome() and arq_texto.validar_processamento()):
@@ -79,7 +79,7 @@ class DatabaseArquivosTextos(DatabaseABS):
             cursor.close()
             return resposta
         except sqlite3.IntegrityError:
-            return None
+            return 0
         except ValueError:
             return -1
         
