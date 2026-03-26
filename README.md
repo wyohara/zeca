@@ -1,1 +1,2 @@
-Projeto inicial de tokenização
+# handro
+Modelo de ia para estudo
