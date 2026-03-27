@@ -7,10 +7,9 @@ from abc import ABC
 import sys
 from unittest.mock import MagicMock
 
-from modulos.database.db_arquivos_textos import DatabaseArquivosTextos
+from modulos.database.db_arquivos_textos import DatabaseArquivosTextos, ArquivoTextoObject
 from modulos.database.db_tokens import DatabaseTokens,TokenObject
 from modulos.tokenizador.modulos.processamento_textos_abs import ProcessamentoDeTextoABS
-from modulos.tokenizador.modulos.processamento_texto_trie import ProcessamentoTextoTrie
 
 
 class ModeloConcretoTeste(ProcessamentoDeTextoABS):
@@ -19,6 +18,7 @@ class ModeloConcretoTeste(ProcessamentoDeTextoABS):
 
     def _recortar_tokens(self, formato, texto):
         return [TokenObject(0, 'tk1', 10, 'utf-8',''),TokenObject(0, 'tk2', 10, 'utf-8','')]
+
 
 
 class TesteProcessamentoTextoABS(unittest.TestCase):
@@ -51,19 +51,20 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
         
         # Substitui o caminho do dataset - sempre a classe original no caso a abstrata
         self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = self.dataset_dir
-        self.CLASSE_TESTADA._modelo_processamento = "trie"
+        self.CLASSE_TESTADA._modelo_processamento = "abs"
+
+        self.CLASSE_TESTADA._ProcessamentoDeTextoABS__db_textos.set_arquivo_processado(ArquivoTextoObject(0,'texto1.txt','','utf-8'))
     
     def tearDown(self):
         """Limpa o ambiente após cada teste"""
         shutil.rmtree(self.temp_dir)
     
 
-    def teste_1_deve_inicializar_com_modo_teste(self):
+    def teste_1(self):
         """Testa se a classe inicializa corretamente em modo teste"""
         self.assertIsNotNone(self.CLASSE_TESTADA)
-        self.assertTrue(self.CLASSE_TESTADA._ProcessamentoDeTextoABS__modo_teste)
 
-    def test_2_deve_listar_textos_do_dataset(self):
+    def teste_2(self):
         """Testa se a lista de textos é obtida corretamente"""
         lista_textos = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__get_lista_textos()
         self.assertEqual(len(lista_textos), 2)
@@ -72,3 +73,27 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
         
         self.assertEqual(lista_textos[0][0], self.dataset_dir / "texto1.txt")
         self.assertEqual(lista_textos[1][0], self.dataset_dir / "texto2.txt")
+    
+    def teste_3(self):
+        """Checa se o texto selecionado já foi processado"""
+        res = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__is_texto_processado('texto1.txt', 'utf-8')
+        self.assertEqual(res, True)
+
+    def teste_4(self):
+        """Checa se o texto selecionado já foi processado em outro modelo não usado"""
+        res = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__is_texto_processado('texto1.txt', 'hex')
+        self.assertEqual(res, False)
+    
+    def teste_5(self):
+        """Verifica se o método abstrato _recortar_tokens retorna o valor esperado """
+        res = self.CLASSE_TESTADA._recortar_tokens('texto1.txt', 'hex')
+        self.assertEqual(len(res), 2)
+        self.assertEqual(res[0].valor_token, 'tk1')
+        self.assertEqual(res[1].valor_token, 'tk2')
+
+    def teste_6(self):
+        """Testa não encontra a pasta de arquivos de texto """
+        dataset_dir = Path(self.temp_dir) / "dataset_test_erro"
+        self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = dataset_dir
+        lista_textos = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__get_lista_textos()
+        self.assertEqual(lista_textos, [])

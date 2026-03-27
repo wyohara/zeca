@@ -14,16 +14,18 @@ class ProcessamentoDeTextoABS(ABC):
         - controle dos textos lidos
         - salvamento do token no banco de dados
         """
-        self.__db_textos = DatabaseArquivosTextos()
-        self.__db_token = DatabaseTokens()
+        self.__db_textos = DatabaseArquivosTextos(modo_teste=modo_teste)
+        self.__db_tokens = DatabaseTokens(modo_teste=modo_teste)
         self._ferramentas = FerramentasTokenizador()
         self.__dataset = Path(__file__).parent / "dataset"
         self._modelo_processamento = ""
-        self.__modo_teste = modo_teste
 
-    def processar_dataset_textos(self, formato: str, status):
+    def processar_dataset_textos(self, formato: str, status:bool):
         '''
-        Método principal que manipula os textos, ele é chamado externamente
+        Método que carrega e processa os arquivos de texto
+            Args:
+                - formato: formato do token, são aceitos 'utf-8'(unicode) e 'hex' (hexadecimal)
+                - status: exibe informações do processamento
         '''
         #verifica se o texto do path de dataset já foi processado
         for caminho, nome_texto in self.__get_lista_textos():
@@ -35,17 +37,26 @@ class ProcessamentoDeTextoABS(ABC):
                     texto = arq.read()
                     arq.close()                    
                     lista_tokens = self._recortar_tokens(formato, texto)
-                    self.__db_token.inserir_tokens(token_list=lista_tokens)
-                    self.__marcar_texto_como_processado(nome_arquivo=nome_texto, descricao ='', modelo_processamento=self._modelo_processamento)
+
+                    #salvando os dados
+                    self.__db_tokens.inserir_tokens(lista_tokens)
+                    self.__db_textos.set_arquivo_processado(ArquivoTextoObject(0,nome_texto,'',self._modelo_processamento))
     
-    def __get_lista_textos(self):
-        # Retorna a lista de textos processados no formato [caminho, nome_arquivo]
-        dataset = []
-        for arq in self.__dataset.iterdir():
-            if arq.is_file():
-                dataset.append([arq, arq.name])
-        return dataset
-    
+    def __get_lista_textos(self)->list[(str, str)]:
+        '''
+        Método que carrega a lista de texto do dataset
+        return:
+            list[(str, str)]: contendo o caminho completo e o nome do arquivo
+        '''
+        try:
+            dataset = []
+            for caminho in self.__dataset.iterdir():
+                if caminho.is_file():
+                    dataset.append((caminho, caminho.name))
+            return dataset
+        except FileNotFoundError:
+            return []
+
     @abstractmethod
     def _recortar_tokens(self, formato, texto) -> list[TokenObject]:
          """
@@ -60,11 +71,3 @@ class ProcessamentoDeTextoABS(ABC):
             return False
         else:
             return True
-    
-    def __marcar_texto_como_processado(self, nome_arquivo:str, descricao, modelo_processamento):
-        # cria o objeto de manipulação de texto e verifica, se existir atualiza, senão salva
-        arq_texto = ArquivoTextoObject(nome=nome_arquivo, descricao=descricao, modelo_processamento=modelo_processamento)
-        
-        texto = self.__db_textos.get_texto_processado(nome_arquivo, self._modelo_processamento)
-        if texto is None:
-            self.__db_textos.set_arquivo_processado(arq_texto)
