@@ -73,23 +73,30 @@ class TesteDatabaseArquivoTextos(unittest.TestCase):
         self.__adicionar_valores_para_teste()
 
         resultado = self.CLASSE_TESTADA.get_texto_processado(nome='texto_1', modelo_processamento='')
-        self.assertEqual(resultado.nome, None)
+        self.assertEqual(resultado, None)
+    
+    def teste_9(self):
+        'Testa se a classe recupera um arquivo com modelo de processamento inválido'
+        self.__adicionar_valores_para_teste()
 
-    def teste_8(self):
+        resultado = self.CLASSE_TESTADA.get_texto_processado(nome='texto_1', modelo_processamento='tri')
+        self.assertEqual(resultado, None)
+
+    def teste_10(self):
         'Testa se a classe recupera um arquivo sem nome'
         self.__adicionar_valores_para_teste()
 
         resultado = self.CLASSE_TESTADA.get_texto_processado(nome='', modelo_processamento='trie')
-        self.assertEqual(resultado.nome, None)
+        self.assertEqual(resultado, None)
     
-    def teste_8(self):
+    def teste_11(self):
         'Testa se a classe recupera o nome de todos os arquivos de textos'
         self.__adicionar_valores_para_teste()
 
         resultado = self.CLASSE_TESTADA.get_lista_nomes_arquivos_processados()
         self.assertEqual(resultado, ['texto_1', 'texto_2'])
     
-    def teste_9(self):
+    def teste_12(self):
         'Testa se a classe recupera o nome de todos os arquivos de textos com modelo "trie"'
         self.__adicionar_valores_para_teste()
         

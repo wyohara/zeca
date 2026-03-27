@@ -6,17 +6,17 @@ import os
 class ModeloProcessamento:
     TRIE: Final[str] = 'trie'
     BAG:Final[str] = 'bag'
+    LISTA:Final[tuple[str]] = (TRIE, BAG)
 
 @dataclass(frozen=True)   
 class FormatoTexto:
     HEX: Final[str] = 'hex'
     UTF8:Final[str] = 'utf-8'
+    LISTA:Final[tuple[str]] = (HEX, UTF8)
 
 @dataclass(frozen=True)   
 class TokensEspeciais:
     UNKNOWN: Final[str] = '[unk]'
-
-
 
 @dataclass(frozen=True)
 class ConstanteTokenizador:

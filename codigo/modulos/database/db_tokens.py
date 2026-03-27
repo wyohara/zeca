@@ -1,16 +1,15 @@
 from datetime import date
 import sqlite3
 from modulos.database.database_abs import DatabaseABS
+from modulos.constantes.constante_tokenizador import ConstanteTokenizador
 
 
 class TokenObject():
-    def __init__(self, id=0, valor_token='', quantidade=0, formato='', data_criacao=''):
+    def __init__(self, id=0, valor_token='', quantidade=0, formato=''):
         self.id=id
         self.valor_token=valor_token
         self.quantidade=quantidade
         self.formato=formato
-        self.data_criacao=data_criacao
-    
     
     def __str__(self):
         return f"Arquivo de tokens tipo TokenObject\n\t>id {self.id} - '{self.valor_token}', modelo '{self.quantidade}', formato '{self.formato}'"
@@ -25,7 +24,7 @@ class TokenObject():
         return self.quantidade>0 and isinstance(self.quantidade, int)
     
     def validar_formato(self):        
-        return len(self.formato)>0 and isinstance(self.formato, str)
+        return self.formato in ConstanteTokenizador.FORMATO_TEXTO.LISTA
 
 
 class DatabaseTokens(DatabaseABS):
@@ -64,7 +63,7 @@ class DatabaseTokens(DatabaseABS):
             tokens = []
 
             for r in resultado:
-                tokens.append(TokenObject(r[0], r[1],r[2],r[3],r[4]))
+                tokens.append(TokenObject(id=r[0], valor=r[1], quantidade=r[2], formato=r[3]))
             return tokens
         except sqlite3.IntegrityError:
             return None
@@ -95,7 +94,7 @@ class DatabaseTokens(DatabaseABS):
             resultado = cursor.fetchone()
             cursor.close()
 
-            return TokenObject(id=resultado[0], valor_token=resultado[1], quantidade=resultado[2], formato=resultado[3], data_criacao=resultado[4])
+            return TokenObject(id=resultado[0], valor_token=resultado[1], quantidade=resultado[2], formato=resultado[3])
         except sqlite3.IntegrityError:
             return None
         except ValueError:
@@ -126,25 +125,23 @@ class DatabaseTokens(DatabaseABS):
         try:
             cursor = self.db.cursor()
             sql = """
-                INSERT INTO Token (valor_token, quantidade, formato, data_criacao) 
-                VALUES (?, ?, ?, ?) 
+                INSERT INTO Token (valor_token, quantidade, formato) 
+                VALUES (?, ?, ?) 
                 ON CONFLICT(valor_token) DO UPDATE SET
                     quantidade = quantidade + ?;
             """
-            
-            data_atual = date.today().strftime('%d/%m/%Y')
             
             for i in range(0, len(token_list), bloco):
                 bloco = token_list[i:i + bloco]
                 dados_bloco = []
                 
                 for tk in bloco:
+                    
                     if tk.validar_formato() and tk.validar_quantidade() and tk.validar_valor_token():
                         dados_bloco.append((
                             tk.valor_token,
                             tk.quantidade,
                             tk.formato,
-                            data_atual,
                             tk.quantidade
                         ))
                     else:

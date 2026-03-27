@@ -17,7 +17,7 @@ class ModeloConcretoTeste(ProcessamentoDeTextoABS):
         super().__init__(modo_teste)
 
     def _recortar_tokens(self, formato, texto):
-        return [TokenObject(0, 'tk1', 10, 'utf-8',''),TokenObject(0, 'tk2', 10, 'utf-8','')]
+        return [TokenObject(0, 'tk1', 10, 'utf-8'),TokenObject(0, 'tk2', 10, 'utf-8')]
 
 
 
@@ -53,7 +53,7 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
         self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = self.dataset_dir
         self.CLASSE_TESTADA._modelo_processamento = "abs"
 
-        self.CLASSE_TESTADA._ProcessamentoDeTextoABS__db_textos.set_arquivo_processado(ArquivoTextoObject(0,'texto1.txt','','utf-8'))
+        self.CLASSE_TESTADA._ProcessamentoDeTextoABS__db_textos.set_arquivo_processado(ArquivoTextoObject(0,'texto1.txt','','trie'))
     
     def tearDown(self):
         """Limpa o ambiente após cada teste"""
@@ -76,7 +76,7 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
     
     def teste_3(self):
         """Checa se o texto selecionado já foi processado"""
-        res = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__is_texto_processado('texto1.txt', 'utf-8')
+        res = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__is_texto_processado('texto1.txt', 'trie')
         self.assertEqual(res, True)
 
     def teste_4(self):

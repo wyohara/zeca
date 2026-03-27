@@ -15,8 +15,7 @@ CREATE TABLE IF NOT EXISTS Token (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     valor_token TEXT NOT NULL UNIQUE,
     quantidade INTEGER NOT NULL,
-    formato TEXT,
-    data_criacao TEXT NOT NULL
+    formato TEXT
 );
 """
 

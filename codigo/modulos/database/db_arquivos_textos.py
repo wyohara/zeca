@@ -1,6 +1,7 @@
 from datetime import date
 import sqlite3
 from modulos.database.database_abs import DatabaseABS
+from modulos.constantes.constante_tokenizador import ConstanteTokenizador
 
 class ArquivoTextoObject():
     def __init__(self, id=0, nome='', descricao='',  modelo_processamento=''):
@@ -21,7 +22,7 @@ class ArquivoTextoObject():
         return len(self.nome) > 0 and isinstance(self.nome, str)
     
     def validar_processamento(self):
-        return len(self.modelo_processamento) > 0 and isinstance(self.modelo_processamento, str)
+        return self.modelo_processamento in ConstanteTokenizador.MODELO_PROCESSAMENTO.LISTA
 
 
 class DatabaseArquivosTextos(DatabaseABS):

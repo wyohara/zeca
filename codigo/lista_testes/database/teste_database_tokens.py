@@ -47,8 +47,8 @@ class TesteDatabaseTokens(unittest.TestCase):
         self.assertEqual(resultado, -1)
 
     def teste_6(self):
-        'Inserindo token com quantidade vazia'
-        resultado = self.CLASSE_TESTADA.inserir_tokens(TokenObject(valor_token='tk3', quantidade=0, formato='utf-8'))
+        'Inserindo token com formato não aceito'
+        resultado = self.CLASSE_TESTADA.inserir_tokens(TokenObject(valor_token='tk3', quantidade=10, formato='utf-errada'))
         self.assertEqual(resultado, -1)
     
     def teste_7(self):
