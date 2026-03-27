@@ -7,17 +7,25 @@ from abc import ABC
 import sys
 from unittest.mock import MagicMock
 
-from modulos.database.db_arquivos_textos import DatabaseArquivosTextos, ArquivoTextoObject
-from modulos.database.db_tokens import DatabaseTokens, TokenObject
+from modulos.database.db_arquivos_textos import DatabaseArquivosTextos
+from modulos.database.db_tokens import DatabaseTokens,TokenObject
 from modulos.tokenizador.modulos.processamento_textos_abs import ProcessamentoDeTextoABS
 from modulos.tokenizador.modulos.processamento_texto_trie import ProcessamentoTextoTrie
 
 
+class ModeloConcretoTeste(ProcessamentoDeTextoABS):
+    def __init__(self, modo_teste=True):
+        super().__init__(modo_teste)
 
-class TesteProcessamentoTextoTrie(unittest.TestCase):
+    def _recortar_tokens(self, formato, texto):
+        return [TokenObject(0, 'tk1', 10, 'utf-8',''),TokenObject(0, 'tk2', 10, 'utf-8','')]
+
+
+class TesteProcessamentoTextoABS(unittest.TestCase):
     def __init__(self, methodName = "runTest"):
-        super().__init__(methodName)
-
+        super().__init__(methodName)        
+        self._modelo_processamento = 'teste'
+    
     def setUp(self):
         """Configura o ambiente de teste antes de cada teste"""
         # Cria diretório temporário para dataset
@@ -39,10 +47,9 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
         # Substitui as dependências
         with unittest.mock.patch('modulos.database.db_arquivos_textos.DatabaseArquivosTextos', return_value=self.mock_db_arquivos):
             with unittest.mock.patch('modulos.database.db_tokens.DatabaseTokens', return_value=self.mock_db_tokens):
-                self.CLASSE_TESTADA = ProcessamentoTextoTrie(modo_teste=True)
+                self.CLASSE_TESTADA = ModeloConcretoTeste(modo_teste=True)
         
-        # Substitui o caminho do dataset - CORREÇÃO AQUI
-        # Para acessar atributo privado __dataset, use: _NomeClasse__atributo
+        # Substitui o caminho do dataset - sempre a classe original no caso a abstrata
         self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = self.dataset_dir
         self.CLASSE_TESTADA._modelo_processamento = "trie"
     
@@ -65,15 +72,3 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
         
         self.assertEqual(lista_textos[0][0], self.dataset_dir / "texto1.txt")
         self.assertEqual(lista_textos[1][0], self.dataset_dir / "texto2.txt")
-
-
-
-def teste_processamento_trie():
-     # Carrega todos os testes
-    test_suite = unittest.TestLoader().loadTestsFromTestCase(TesteProcessamentoTextoTrie)
-    # Executa os testes com verbosidade
-    test_runner = unittest.TextTestRunner(verbosity=2)
-    result = test_runner.run(test_suite)
-    
-    # Retorna código de saída apropriado
-    sys.exit(0 if result.wasSuccessful() else 1)

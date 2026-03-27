@@ -100,7 +100,7 @@ class DatabaseArquivosTextos(DatabaseABS):
         try:
             cursor = self.db.cursor()
             sql = "SELECT * FROM ArquivoProcessado WHERE nome=? and modelo_processamento=?"
-            cursor.execute(sql, (nome,modelo_processamento))
+            cursor.execute(sql, (nome, modelo_processamento))
             r = cursor.fetchone()
             cursor.close()
             if r is not None:
@@ -109,4 +109,4 @@ class DatabaseArquivosTextos(DatabaseABS):
             else:
                 return None
         except sqlite3.IntegrityError:
-            return None
+            return 0

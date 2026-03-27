@@ -47,6 +47,7 @@ class DatabaseTokens(DatabaseABS):
             Returns:
                 list[TokenObject]: lista de tokens
                 None: se houver violação de integridade.
+                -1: se formato inválido
             
             Raises:
                 sqlite3.IntegrityError: Se ocorrer um erro de banco de dados relacionado a integridade.
@@ -60,16 +61,47 @@ class DatabaseTokens(DatabaseABS):
             cursor.execute("SELECT * FROM Token WHERE formato=? ORDER BY quantidade DESC LIMIT ?;", (formato, quantidade,))
             resultado = cursor.fetchall()
             cursor.close()
-            tokenizador = []
+            tokens = []
 
             for r in resultado:
-                tokenizador.append(TokenObject(r[0], r[1],r[2],r[3],r[4]))
-            return tokenizador
+                tokens.append(TokenObject(r[0], r[1],r[2],r[3],r[4]))
+            return tokens
         except sqlite3.IntegrityError:
             return None
         except ValueError:
             return -1
     
+    def get_token(self, valor_token:str)->TokenObject:
+        '''
+        Recupera uma lista de tokens do banco de dados pelo valor do token
+            Args:
+                valor_token: valor do token
+            
+            Returns:
+                list[TokenObject]: lista de tokens
+                None: se houver violação de integridade.
+                -1: se formato inválido
+            
+            Raises:
+                sqlite3.IntegrityError: Se ocorrer um erro de banco de dados relacionado a integridade.
+                valueError: formato ou quantidade inválidos
+        '''
+        try:
+            if not (len(valor_token)>0 and isinstance(valor_token, str)):
+                raise ValueError
+            
+            cursor = self.db.cursor()
+            cursor.execute("SELECT * FROM Token WHERE valor_token=?;", (valor_token,))
+            resultado = cursor.fetchone()
+            cursor.close()
+
+            return TokenObject(id=resultado[0], valor_token=resultado[1], quantidade=resultado[2], formato=resultado[3], data_criacao=resultado[4])
+        except sqlite3.IntegrityError:
+            return None
+        except ValueError:
+            return -1
+
+
     def inserir_tokens(self, token_list:list[TokenObject], bloco=1000):
         '''
         Insere uma lista de tokens no banco de dados de arquivos processados.
