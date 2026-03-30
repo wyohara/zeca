@@ -13,9 +13,11 @@ CREATE TABLE IF NOT EXISTS ArquivoProcessado (
 SQL_TABELA_TOKENS = """
 CREATE TABLE IF NOT EXISTS Token (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    valor_token TEXT NOT NULL UNIQUE,
+    valor_token TEXT NOT NULL,
     quantidade INTEGER NOT NULL,
-    formato TEXT
+    formato TEXT,    
+    token_fixo BOOLEAN DEFAULT FALSE,
+    UNIQUE(valor_token, formato) 
 );
 """
 

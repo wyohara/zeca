@@ -2,14 +2,16 @@ from datetime import date
 import sqlite3
 from modulos.database.database_abs import DatabaseABS
 from modulos.constantes.constante_tokenizador import ConstanteTokenizador
+from modulos.tokenizador.modulos.ferramentas_tokenizador import FerramentasTokenizador
 
 
 class TokenObject():
-    def __init__(self, id=0, valor_token='', quantidade=0, formato=''):
+    def __init__(self, id=0, valor_token='', quantidade=0, formato='',token_fixo=0):
         self.id=id
         self.valor_token=valor_token
         self.quantidade=quantidade
         self.formato=formato
+        self.token_fixo=token_fixo
     
     def __str__(self):
         return f"Arquivo de tokens tipo TokenObject\n\t>id {self.id} - '{self.valor_token}', modelo '{self.quantidade}', formato '{self.formato}'"
@@ -27,7 +29,7 @@ class TokenObject():
         return self.formato in ConstanteTokenizador.FORMATO_TEXTO.LISTA
 
 
-class DatabaseTokens(DatabaseABS):
+class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
     def __init__(self, modo_teste=False):
         '''
         Classe que controla a database de tokens
@@ -35,6 +37,44 @@ class DatabaseTokens(DatabaseABS):
                 modo_teste: define se o banco de dados será no modo teste (em memória)
         '''
         super().__init__(modo_teste)
+        self.__definir_tokens_fixos()
+
+    def __definir_tokens_fixos(self)->int:
+        TOKENS = [',', '?', '!', '{', '}', '[', ']', '(', ')', ';', '_', '/', '|', '@', '#', '\'', '’', '"', '”', '-', '—', '...', '.',# Originais (sem duplicar com os que vêm depois)
+                  'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',# Letras minúsculas
+                  'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
+                  'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',# Letras maiúsculas
+                  'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
+                  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',# Números
+                  '+', '-', '*', '/', '%', '**', '//', # Operadores aritméticos
+                  '==', '!=', '<', '>', '<=', '>=',# Operadores de comparação
+                  'and', 'or', 'not',# Operadores lógicos
+                  '=', '+=', '-=', '*=', '/=', '%=', '**=', '//=',# Operadores de atribuição
+                  '&', '|', '^', '~', '<<', '>>',# Operadores bitwise
+                  ':', ';', '@', '$', '`', ' ',# Símbolos e pontuação (apenas os que não estão nos originais)
+                  '->', ':='# Outros operadores
+                ]
+        tks =[]
+        for tk in TOKENS:
+            for form in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
+                if form ==ConstanteTokenizador.FORMATO_TEXTO.HEX:
+                    tk = self.converter_texto_para_hex(tk)
+                elif form ==ConstanteTokenizador.FORMATO_TEXTO.UTF8:
+                    tk = self.converter_hex_para_texto(tk)
+                tks.append((tk, 1, form, True))
+        cursor = self.db.cursor()
+        sql = """INSERT INTO Token (valor_token, quantidade, formato, token_fixo) VALUES (?, ?, ?, ?)
+                ON CONFLICT(valor_token, formato) DO UPDATE SET
+                    quantidade = 1 ;"""
+        cursor.executemany(sql, tks)
+        self.db.commit()
+
+        # Obtém o último ID inserido/afetado para evitar conflito 
+        cursor.execute("SELECT last_insert_rowid()")
+        resposta = cursor.fetchone()[0]
+        return resposta
+    
+
 
     def get_tokenObjects(self, formato:str, quantidade=10000)-> list[TokenObject]:
         '''
@@ -149,10 +189,11 @@ class DatabaseTokens(DatabaseABS):
         try:
             cursor = self.db.cursor()
             sql = """
-                INSERT INTO Token (valor_token, quantidade, formato) 
-                VALUES (?, ?, ?) 
-                ON CONFLICT(valor_token) DO UPDATE SET
-                    quantidade = quantidade + ?;
+                INSERT INTO Token (valor_token, quantidade, formato, token_fixo) 
+                VALUES (?, ?, ?, ?)
+                ON CONFLICT(valor_token, formato) DO UPDATE SET
+                    quantidade = quantidade + ? 
+                WHERE formato=?
             """
             
             for i in range(0, len(lista_tokens), tam_bloco):
@@ -166,7 +207,9 @@ class DatabaseTokens(DatabaseABS):
                             tk.valor_token,
                             tk.quantidade,
                             tk.formato,
-                            tk.quantidade
+                            tk.token_fixo,
+                            tk.quantidade,
+                            tk.formato
                         ))
                     else:
                         raise ValueError  

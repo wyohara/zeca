@@ -1,7 +1,7 @@
 from modulos.tokenizador.modulos.processamento_textos_abs import ProcessamentoDeTextoABS
 from modulos.constantes.constante_tokenizador import CONST_TOKENIZADOR
 from modulos.database.db_tokens import TokenObject
-import copy
+from modulos.tokenizador.modulos.preprocessamento_texto import PreprocessamentoTexto
 
 
 class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
@@ -35,7 +35,10 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
 
         #remontando a árvore de Trie para continuar
         for tokens in self._db_tokens.get_lista_valores_tokens(formato):
-            self.__arvore = self.__montar_arvore_trie(tokens,self.__arvore, formato, incrementar_arvore=False)
+            self.__arvore = self.__montar_arvore_trie(tokens,self.__arvore, formato, contar_tokens=False)
+
+        #aplicando o preprocessamento de texto
+        texto = PreprocessamentoTexto(texto).get_texto()
 
         #aplicando o algoritmo ao texto
         for i, palavra in enumerate(self.__get_palavras_recortadas(texto=texto, formato=formato)):
