@@ -1,6 +1,7 @@
 from modulos.tokenizador.modulos.processamento_textos_abs import ProcessamentoDeTextoABS
 from modulos.constantes.constante_tokenizador import CONST_TOKENIZADOR
 from modulos.database.db_tokens import TokenObject
+import copy
 
 
 class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
@@ -16,12 +17,14 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
     def __init__(self, modo_teste=False):
         super().__init__(modo_teste)
         self._modelo_processamento = CONST_TOKENIZADOR.MODELO_PROCESSAMENTO.TRIE
-    
+        self.__arvore={}
+
     def _recortar_tokens(self, texto:str, formato:str):    
         """
         Método central que gerencia toda a criação da árvore de trier
         Percorre o corpus separando em palavras e aplica o processamento, após isso
         gera a chave que é transformada em tokens e salvo no banco de dados.
+        Processa apenas a cópia da árvore original para manter a lógica dos tokens
 
         Params:
             texto: corpus do texto usado para tokenizar
@@ -29,11 +32,18 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
         Returns:
             list[TokenObject]: lista de objetos tokens
         """
-        arvore = {}
-        for i, palavra in enumerate(self.__get_palavras_recortadas(texto, formato)):
-            arvore = self.__montar_arvore_trie(palavra, arvore, formato)
-        return self.__montar_lista_tokens(formato, arvore)
-    
+
+        #remontando a árvore de Trie para continuar
+        for tokens in self._db_tokens.get_lista_valores_tokens(formato):
+            self.__arvore = self.__montar_arvore_trie(tokens,self.__arvore, formato, incrementar_arvore=False)
+
+        #aplicando o algoritmo ao texto
+        for i, palavra in enumerate(self.__get_palavras_recortadas(texto=texto, formato=formato)):
+            self.__arvore = self.__montar_arvore_trie(palavra, self.__arvore, formato)
+
+        resposta = self.__montar_lista_tokens(formato, self.__arvore)
+        return resposta
+        
 
     def __get_palavras_recortadas(self, texto:str, formato:str)-> list[str]:
         '''
@@ -62,7 +72,7 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
         return lista_palavras
 
     
-    def __montar_arvore_trie(self, palavra:str, arvore:dict, formato:str) -> dict:
+    def __montar_arvore_trie(self, palavra:str, arvore:dict, formato:str, contar_tokens=True) -> dict:
         """
         Método que monta a ávore de trie. Cria um dicionário onde a chave é cada caractere. 
         Caso a sequência de caracteres não exista é criada uma ramificação e a chave fim, 
@@ -76,6 +86,7 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
         Params:
             palavra: palavra processada que será usada na árvore
             arvore: ávore que será usada no processo
+            contar_tokens: incrementa o contador de tokens
 
         Returns:
             arvore: a árvore inicial atualizada com os novos valores
@@ -97,7 +108,7 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
                 no_atual[letra] = {}
             
             # incrementao contador de fim
-            if 'fim' in no_atual.keys():
+            if ('fim' in no_atual.keys()) and contar_tokens:
                 no_atual['fim'] += 1
 
             # Se for a última letra, marca como fim de palavra

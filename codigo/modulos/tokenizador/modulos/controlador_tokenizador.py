@@ -1,5 +1,5 @@
 from modulos.database.db_tokens import DatabaseTokens, TokenObject
-from modulos.tokenizador.ferramentas_tokenizador import FerramentasTokenizador
+from modulos.tokenizador.modulos.ferramentas_tokenizador import FerramentasTokenizador
 from modulos.constantes.constante_tokenizador import CONST_TOKENIZADOR
 
 class ControladorTokenizador(FerramentasTokenizador):

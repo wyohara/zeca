@@ -53,7 +53,7 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
         self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = self.dataset_dir
         self.CLASSE_TESTADA._modelo_processamento = "abs"
 
-        self.CLASSE_TESTADA._ProcessamentoDeTextoABS__db_textos.set_arquivo_processado(ArquivoTextoObject(0,'texto1.txt','','trie'))
+        self.CLASSE_TESTADA._db_textos.set_arquivo_processado(ArquivoTextoObject(0,'texto1.txt','','trie'))
     
     def tearDown(self):
         """Limpa o ambiente após cada teste"""
@@ -92,8 +92,25 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
         self.assertEqual(res[1].valor_token, 'tk2')
 
     def teste_6(self):
-        """Testa não encontra a pasta de arquivos de texto """
+        """Testa erro no caso de não encontrar a pasta de arquivos de texto """
         dataset_dir = Path(self.temp_dir) / "dataset_test_erro"
         self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = dataset_dir
         lista_textos = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__get_lista_textos()
         self.assertEqual(lista_textos, [])
+
+    def teste_7(self):
+        "Testa se ocorre erro ao tentar processar o dataset no formato errado"
+        with self.assertRaises(ValueError):
+            self.CLASSE_TESTADA.processar_dataset_textos(formato='hx', status=True)
+    
+    def teste_8(self):
+        "Testa se processa em utf-8"
+        res = self.CLASSE_TESTADA.processar_dataset_textos(formato='utf-8', status=True)
+        self.assertEqual(res, True)
+
+    def teste_9(self):
+        "Testa se processa em hex"
+        res = self.CLASSE_TESTADA.processar_dataset_textos(formato='hex', status=True)
+        self.assertEqual(res, True)
+        
+        

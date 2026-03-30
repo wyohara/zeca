@@ -70,6 +70,30 @@ class DatabaseTokens(DatabaseABS):
         except ValueError:
             return -1
     
+    def get_lista_valores_tokens(self, formato:str)->list[str]:
+        '''
+        Método que retorna uma lista de tokens do banco de dados ordenados do maior para o menor por formato
+
+        Params:
+            formato: formato hex ou utf-8
+        Return:
+            list[str]: lista de tokens ordenados do maior para o menor
+        '''
+        lista_tokens = []
+        
+        if formato not in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
+            return -1
+        else:
+            cursor = self.db.cursor()
+            cursor.execute("SELECT valor_token FROM Token WHERE formato=? ORDER BY LENGTH(valor_token) DESC;", (formato,))
+            resultado = cursor.fetchall()
+            cursor.close()
+
+            for r in resultado:
+                lista_tokens.append(r[0])
+            return lista_tokens
+
+    
     def get_token(self, valor_token:str)->TokenObject:
         '''
         Recupera uma lista de tokens do banco de dados pelo valor do token
@@ -101,7 +125,7 @@ class DatabaseTokens(DatabaseABS):
             return -1
 
 
-    def inserir_tokens(self, token_list:list[TokenObject], bloco=1000):
+    def inserir_tokens(self, lista_tokens:list[TokenObject], tam_bloco=1000):
         '''
         Insere uma lista de tokens no banco de dados de arquivos processados.
             Args:
@@ -131,8 +155,8 @@ class DatabaseTokens(DatabaseABS):
                     quantidade = quantidade + ?;
             """
             
-            for i in range(0, len(token_list), bloco):
-                bloco = token_list[i:i + bloco]
+            for i in range(0, len(lista_tokens), tam_bloco):
+                bloco = lista_tokens[i:i + tam_bloco]
                 dados_bloco = []
                 
                 for tk in bloco:

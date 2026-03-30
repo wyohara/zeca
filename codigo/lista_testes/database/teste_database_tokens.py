@@ -72,3 +72,13 @@ class TesteDatabaseTokens(unittest.TestCase):
         'Recuperando lista de tokens com formato desconhecido'
         resultado = self.CLASSE_TESTADA.get_tokenObjects(formato='utf', quantidade=10)
         self.assertEqual(resultado, [])
+    
+    def teste_9(self):
+        'Recupera lista de tokens em formato de lista a partir de um formato'
+        resultado = self.CLASSE_TESTADA.get_lista_valores_tokens(formato='utf-8')
+        self.assertEqual(resultado,['tk1', 'tk2'])
+    
+    def teste_10(self):
+        'Recupera lista de tokens em formato de lista a partir de um formato desconhecido'
+        resultado = self.CLASSE_TESTADA.get_lista_valores_tokens(formato='utf')
+        self.assertEqual(resultado, -1)

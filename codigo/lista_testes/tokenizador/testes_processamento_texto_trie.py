@@ -46,7 +46,7 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
         self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = self.dataset_dir
         self.CLASSE_TESTADA._modelo_processamento = "abs"
 
-        self.CLASSE_TESTADA._ProcessamentoDeTextoABS__db_textos.set_arquivo_processado(ArquivoTextoObject(0,'texto1.txt','','trie'))
+        self.CLASSE_TESTADA._db_textos.set_arquivo_processado(ArquivoTextoObject(0,'texto1.txt','','trie'))
     
     def tearDown(self):
         """Limpa o ambiente após cada teste"""
@@ -92,6 +92,17 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
         for p in palavras:
             resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_arvore_trie(p, resultado, 'utf-8')
         self.assertEqual(resultado, esperado)
+    
+    def teste_6_1(self):
+            """Testa se é criada uma árvore trie no formato válido com varios sufixos em utf-8 sem incrementar o token"""
+            esperado = {'a': {'m': {'o': {'r': {'fim': 1}}, 'fim': 1, 'a': {'r': {'fim': 1}}}}}
+            palavra = 'amor amar'
+            palavras = self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas(palavra, 'utf-8')
+            resultado = {}
+            for p in palavras:
+                resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_arvore_trie(p, resultado, 'utf-8',False)
+            self.assertEqual(resultado, esperado)
+
     
     def teste_7(self):
         """Testa se é criada uma árvore trie no formato válido em hex"""
