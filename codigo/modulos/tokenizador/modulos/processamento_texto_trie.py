@@ -15,73 +15,129 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
     """
     def __init__(self, modo_teste=False):
         super().__init__(modo_teste)
-        self.__arvore_trie ={}
         self._modelo_processamento = CONST_TOKENIZADOR.MODELO_PROCESSAMENTO.TRIE
     
-    def _recortar_tokens(self,formato, texto:str):    
+    def _recortar_tokens(self, texto:str, formato:str):    
         """
-        Processa o texto inserindo todas as palavras na Trie
+        Método central que gerencia toda a criação da árvore de trier
+        Percorre o corpus separando em palavras e aplica o processamento, após isso
+        gera a chave que é transformada em tokens e salvo no banco de dados.
+
+        Params:
+            texto: corpus do texto usado para tokenizar
+            formato: formato de saída, pode ser utf-8 ou hex
+        Returns:
+            list[TokenObject]: lista de objetos tokens
         """
-        palavras = texto.split()
+        arvore = {}
+        for i, palavra in enumerate(self.__get_palavras_recortadas(texto, formato)):
+            arvore = self.__montar_arvore_trie(palavra, arvore, formato)
+        return self.__montar_lista_tokens(formato, arvore)
+    
+
+    def __get_palavras_recortadas(self, texto:str, formato:str)-> list[str]:
+        '''
+        Método que recorta as palavras do texto e aplica as regras de modificação.
+        O método ignora quebra de linha e espaços.
+        Args:
+            texto: Texto bruto a ser refatorado
+            formato: Formatos aceitos de codificação (utf-8 e hex)
+        Returns:
+            list[str]: lista de palavras recortadas
+        Raises:
+            ValueError: solicita um formato inválido
+        '''
+        palavras = texto.replace('\n',' ').split()
+        lista_palavras = []
+        if not palavras:
+            raise ValueError
         for palavra in palavras:
-            if formato == CONST_TOKENIZADOR.FORMATO_TEXTO.UTF8:
+            if formato.lower() == CONST_TOKENIZADOR.FORMATO_TEXTO.UTF8:
                 pass
-            elif formato == CONST_TOKENIZADOR.FORMATO_TEXTO.HEX:
+            elif formato.lower() == CONST_TOKENIZADOR.FORMATO_TEXTO.HEX:
                 palavra = self._ferramentas.converter_texto_para_hex(palavra)
             else:
                 raise ValueError
-            self.__inserir_palavra(palavra)
-        return self.__montar_lista_tokens(formato)
+            lista_palavras.append(palavra)
+        return lista_palavras
 
     
-    def __inserir_palavra(self, palavra:str):
+    def __montar_arvore_trie(self, palavra:str, arvore:dict, formato:str) -> dict:
         """
-        Insere uma palavra na Árvore Trie
-        """
-        no_atual = self.__arvore_trie
+        Método que monta a ávore de trie. Cria um dicionário onde a chave é cada caractere. 
+        Caso a sequência de caracteres não exista é criada uma ramificação e a chave fim, 
+        indicando o número de vezes que o contador passou pela bifurcação.
+
+        Obs: 
+            - A árvore precisa encontrar duas vezes o mesmo prefixo para bifurcar
+            - Internamente o radical vira uma nova árvore, mas seu contador é 
+            somado pela regra de integridade do banco de dados.
         
-        for i, letra in enumerate(palavra):
+        Params:
+            palavra: palavra processada que será usada na árvore
+            arvore: ávore que será usada no processo
 
-            try:
-                no_atual['fim'] +=1
-            except KeyError:
-                no_atual['fim'] =1                
+        Returns:
+            arvore: a árvore inicial atualizada com os novos valores
 
-            # Cria o nó e marca o token como fim se não existir
-            if letra not in no_atual:
+        """
+        no_atual = arvore
+        raiz = True
+
+        # cria o step do range, se for hex irá andar 2 bytes (1 char UNICODE) se utf-8 uma letra
+        step = 1 
+        if formato == CONST_TOKENIZADOR.FORMATO_TEXTO.HEX: step = 2
+        for i in range(0,len(palavra), step):
+            letra = palavra[i:i+step]
+            # Cria o nó fim para uma bifurcação
+            if letra not in no_atual :
+                # verifica se é raiz para não criar a chave fim no início da árvore
+                if (len(no_atual.keys())==1 and not raiz):
+                    no_atual['fim'] = 1
                 no_atual[letra] = {}
-                no_atual['fim'] =1                  
             
-            #sempre que passa por uma token fim é incrementado
+            # incrementao contador de fim
             if 'fim' in no_atual.keys():
-                no_atual['fim'] +=1 
-                 
-            # Se for a última letra, marca como fim de palavra
-            if i == len(palavra) - 1:
-                try:
-                    no_atual[letra]['fim'] += 1                    
-                except KeyError:
-                    no_atual[letra]['fim'] = 1
-            
-            #incrementa a árvore para o próximo nó
-            no_atual = no_atual[letra]
+                no_atual['fim'] += 1
 
-    def __montar_lista_tokens(self, formato:str):
+            # Se for a última letra, marca como fim de palavra
+            if i == len(palavra) - step:
+                no_atual[letra]['fim'] = 1
+            
+            no_atual = no_atual[letra] #incrementa a árvore para o próximo nó
+            raiz = False # marca como não sendo mais raiz
+        return arvore
+
+    
+    def __montar_lista_tokens(self, formato:str, arvore:dict) -> list[TokenObject]:
         """
-        A partir do dicionário da Trie, retorna uma lista de tuplas (token, frequência)
-        """
-        tokens_encontrados = []
-        pilha = [(self.__arvore_trie, "")]  # (nó_atual, palavra_parcial)
+        A partir do dicionário da Trie, retorna uma lista de TokenObject
+        Params:
+            formato: formato do texto em 'utf-8' ou 'hex'
+            arvore: a árvore usada para criar tokens
         
+        Returns:
+            list[TokenObject]: lista de objetos de token para salvar no bd
+        """
+        
+        pilha = [[arvore, ""]]  # (nó_atual, token)
+        
+        resposta = []
         while pilha:
             no_atual, token = pilha.pop()
+        
+            # Primeiro, verifica se o nó atual tem 'fim' diretamente e zera os tokens
+            if 'fim' in no_atual:
+                resposta.append(TokenObject(valor_token=token, quantidade=no_atual['fim'], formato=formato))
+                token = ''
             
-            # Percorre todas as chaves do nó atual
-            for chave, quantidade in no_atual.items():
-                if chave == 'fim':
-                    # Quando encontra 'fim', significa que uma palavra completa foi formada
-                    tokens_encontrados.append(TokenObject(valor_token=token, quantidade=quantidade, formato=formato))
-                else:
-                    # Caso não encontre fim continua descendo na árvore e concatena o token com a chave
-                    pilha.append((quantidade, token + chave))       
-        return tokens_encontrados
+            # Depois, processa os filhos (exceto 'fim')
+            #amarrado com try, caso entre por acidente em uma chave 'fim'
+            try:
+                for chave, valor in no_atual.items():
+                    if chave != 'fim':
+                        pilha.append((valor, token + chave)) 
+            except AttributeError:
+                pass
+    
+        return resposta
