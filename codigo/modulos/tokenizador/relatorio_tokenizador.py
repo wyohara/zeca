@@ -1,4 +1,4 @@
-from modulos.database.tokenizador_object import TokenizadorObject
+from modulos.tokenizador.modulos.tokenizador import Tokenizador
 from modulos.database.db_tokens import DatabaseTokens
 
 import math
@@ -6,14 +6,18 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 class RelatorioTokenizador():
-    def __init__(self, texto:str, tokenizador_analisado:TokenizadorObject ):
+    def __init__(self,tokenizador_analisado:Tokenizador ):        
         self.__dados ={}
-        self.__dados["texto"] = texto
-        self.__dados["tam_texto"] = len(texto)
-        self.__dados["total_plavras"] = len(texto.replace("\n", ' ').split(" "))
+        
+        with open('lista_testes/tokenizador/livro_teste.txt', 'r', encoding='utf-8') as f:
+            texto = f.read()
+            self.__dados["texto"] = texto
+            self.__dados["tam_texto"] = len(texto)
+            palavras = texto.replace('\n', ' ').split()
+            self.__dados["total_palavras"] = len(palavras)
         self.__dados["tokenizador"] = tokenizador_analisado
-        self.__dados["tam_tokenizador"] = tokenizador_analisado.get_tamanho_tokenizador()
-        self.__dados["texto_tokenizado"] = tokenizador_analisado.tokenizar(texto)
+        self.__dados["tam_tokenizador"] = tokenizador_analisado.tamanho_tokenizador
+        self.__dados["texto_tokenizado"] = tokenizador_analisado.transformar_texto_em_tokens(texto)
         self.__dados["total_tokens_no_texto"] = len(self.__dados["texto_tokenizado"])
 
     def get_total_tokens_palavra(self, status = True):       
@@ -63,9 +67,9 @@ class RelatorioTokenizador():
         dados = self.__dados
         resultados = []
         for q in range(token_min, token_max, step):
-            tkr = DatabaseTokens().get_tokenObjects(quantidade= q)
+            tkr = Tokenizador(quantidade=q,formato='utf-8')
             print(f">>>> Gerando tokenizador com {q} tokens")
-            resultados.append([(len(tkr.tokenizar(dados["texto"]))/dados["total_plavras"]), q])
+            resultados.append([(len(tkr.transformar_texto_em_tokens(dados["texto"]))/dados["total_palavras"]), q])
 
         
         relacao_token_palavra_y = [resultado[0] for resultado in resultados]
@@ -116,3 +120,4 @@ class RelatorioTokenizador():
         joelho_x = x[indice_joelho]
         joelho_y = y[indice_joelho]
         return(joelho_x, joelho_y)
+    

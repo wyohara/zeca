@@ -29,7 +29,7 @@ class TokenObject():
         return self.formato in ConstanteTokenizador.FORMATO_TEXTO.LISTA
 
 
-class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
+class DatabaseTokens(DatabaseABS):
     def __init__(self, modo_teste=False):
         '''
         Classe que controla a database de tokens
@@ -59,9 +59,9 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
         for tk in TOKENS:
             for form in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
                 if form ==ConstanteTokenizador.FORMATO_TEXTO.HEX:
-                    tk = self.converter_texto_para_hex(tk)
+                    tk = FerramentasTokenizador.converter_texto_para_hex(tk)
                 elif form ==ConstanteTokenizador.FORMATO_TEXTO.UTF8:
-                    tk = self.converter_hex_para_texto(tk)
+                    tk = FerramentasTokenizador.converter_hex_para_texto(tk)
                 tks.append((tk, 1, form, True))
         cursor = self.db.cursor()
         sql = """INSERT INTO Token (valor_token, quantidade, formato, token_fixo) VALUES (?, ?, ?, ?)
@@ -128,7 +128,7 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
                 raise ValueError
             
             cursor = self.db.cursor()
-            cursor.execute("SELECT * FROM Token WHERE formato=? AND token_fixo=0 ORDER BY quantidade DESC LIMIT ?;", (formato, quantidade,))
+            cursor.execute("SELECT * FROM Token WHERE formato=? AND token_fixo=0 ORDER BY quantidade DESC LIMIT ? ;", (formato, quantidade,))
             resultado = cursor.fetchall()
             cursor.close()
             tokens = []

@@ -4,7 +4,7 @@ from modulos.database.db_tokens import TokenObject
 from modulos.tokenizador.modulos.ferramentas_tokenizador import FerramentasTokenizador
 import re
 
-class ProcessamentoTextoTrie (ProcessamentoDeTextoABS, FerramentasTokenizador):
+class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
     """
     Algoritmo que usa a arvore de trie para tokenização. Apenas para teste
     Outros algoritmos:
@@ -94,7 +94,7 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS, FerramentasTokenizador):
         # cria o step do range, se for hex irá andar 2 bytes (1 char UNICODE) se utf-8 uma letra
         step = 1 
         for i in range(0,len(palavra), step):
-            letra = self.converter_texto_para_hex(palavra[i:i+step])
+            letra = FerramentasTokenizador.converter_texto_para_hex(palavra[i:i+step])
             # Cria o nó fim para uma bifurcação
             if letra not in no_atual :
                 # verifica se é raiz para não criar a chave fim no início da árvore
@@ -136,7 +136,7 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS, FerramentasTokenizador):
                 if 'fim' in no_atual:
                     #caso utf-8 retorna para texto o hexadecimal
                     if formato.lower() == CONST_TOKENIZADOR.FORMATO_TEXTO.UTF8:
-                        token = self.converter_hex_para_texto(token)
+                        token = FerramentasTokenizador.converter_hex_para_texto(token)
                     resposta.append(TokenObject(valor_token=token, quantidade=no_atual['fim'], formato=formato))
                     token = ''
                 
