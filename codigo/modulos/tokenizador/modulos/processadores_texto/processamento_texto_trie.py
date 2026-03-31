@@ -1,10 +1,10 @@
-from modulos.tokenizador.modulos.processamento_textos_abs import ProcessamentoDeTextoABS
+from modulos.tokenizador.modulos.processadores_texto.processamento_textos_abs import ProcessamentoDeTextoABS
 from modulos.constantes.constante_tokenizador import CONST_TOKENIZADOR
 from modulos.database.db_tokens import TokenObject
-from modulos.tokenizador.modulos.preprocessamento_texto import PreprocessamentoTexto
+from modulos.tokenizador.modulos.ferramentas_tokenizador import FerramentasTokenizador
+import re
 
-
-class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
+class ProcessamentoTextoTrie (ProcessamentoDeTextoABS, FerramentasTokenizador):
     """
     Algoritmo que usa a arvore de trie para tokenização. Apenas para teste
     Outros algoritmos:
@@ -35,14 +35,12 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
 
         #remontando a árvore de Trie para continuar
         for tokens in self._db_tokens.get_lista_valores_tokens(formato):
-            self.__arvore = self.__montar_arvore_trie(tokens,self.__arvore, formato, contar_tokens=False)
+            self.__arvore = self.__montar_arvore_trie(tokens,self.__arvore, contar_tokens=False)
 
-        #aplicando o preprocessamento de texto
-        texto = PreprocessamentoTexto(texto).get_texto()
-
+        palavras = self.__get_palavras_recortadas(texto=texto, formato=formato)
         #aplicando o algoritmo ao texto
-        for i, palavra in enumerate(self.__get_palavras_recortadas(texto=texto, formato=formato)):
-            self.__arvore = self.__montar_arvore_trie(palavra, self.__arvore, formato)
+        for i, palavra in enumerate(sorted(palavras, key=len, reverse=True)):
+            self.__arvore = self.__montar_arvore_trie(palavra, self.__arvore)
 
         resposta = self.__montar_lista_tokens(formato, self.__arvore)
         return resposta
@@ -51,31 +49,26 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
     def __get_palavras_recortadas(self, texto:str, formato:str)-> list[str]:
         '''
         Método que recorta as palavras do texto e aplica as regras de modificação.
-        O método ignora quebra de linha e espaços.
+        O método quebra em espaços e monta a árvore em hexadecimal para escapar caracteres especiais
         Args:
             texto: Texto bruto a ser refatorado
-            formato: Formatos aceitos de codificação (utf-8 e hex)
         Returns:
             list[str]: lista de palavras recortadas
         Raises:
             ValueError: solicita um formato inválido
         '''
-        palavras = texto.replace('\n',' ').split()
+        palavras = re.findall(r'[^\s]+|\s+', texto)
         lista_palavras = []
         if not palavras:
             raise ValueError
         for palavra in palavras:
-            if formato.lower() == CONST_TOKENIZADOR.FORMATO_TEXTO.UTF8:
-                pass
-            elif formato.lower() == CONST_TOKENIZADOR.FORMATO_TEXTO.HEX:
-                palavra = self._ferramentas.converter_texto_para_hex(palavra)
-            else:
+            if formato.lower() not in CONST_TOKENIZADOR.FORMATO_TEXTO.LISTA:
                 raise ValueError
             lista_palavras.append(palavra)
         return lista_palavras
 
     
-    def __montar_arvore_trie(self, palavra:str, arvore:dict, formato:str, contar_tokens=True) -> dict:
+    def __montar_arvore_trie(self, palavra:str, arvore:dict, contar_tokens=True) -> dict:
         """
         Método que monta a ávore de trie. Cria um dicionário onde a chave é cada caractere. 
         Caso a sequência de caracteres não exista é criada uma ramificação e a chave fim, 
@@ -100,9 +93,8 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
 
         # cria o step do range, se for hex irá andar 2 bytes (1 char UNICODE) se utf-8 uma letra
         step = 1 
-        if formato == CONST_TOKENIZADOR.FORMATO_TEXTO.HEX: step = 2
         for i in range(0,len(palavra), step):
-            letra = palavra[i:i+step]
+            letra = self.converter_texto_para_hex(palavra[i:i+step])
             # Cria o nó fim para uma bifurcação
             if letra not in no_atual :
                 # verifica se é raiz para não criar a chave fim no início da árvore
@@ -135,23 +127,25 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
         """
         
         pilha = [[arvore, ""]]  # (nó_atual, token)
-        
-        resposta = []
+        resposta =[]
         while pilha:
             no_atual, token = pilha.pop()
         
             # Primeiro, verifica se o nó atual tem 'fim' diretamente e zera os tokens
-            if 'fim' in no_atual:
-                resposta.append(TokenObject(valor_token=token, quantidade=no_atual['fim'], formato=formato))
-                token = ''
-            
-            # Depois, processa os filhos (exceto 'fim')
-            #amarrado com try, caso entre por acidente em uma chave 'fim'
-            try:
-                for chave, valor in no_atual.items():
-                    if chave != 'fim':
-                        pilha.append((valor, token + chave)) 
-            except AttributeError:
-                pass
-    
+            if isinstance(no_atual, dict):          
+                if 'fim' in no_atual:
+                    #caso utf-8 retorna para texto o hexadecimal
+                    if formato.lower() == CONST_TOKENIZADOR.FORMATO_TEXTO.UTF8:
+                        token = self.converter_hex_para_texto(token)
+                    resposta.append(TokenObject(valor_token=token, quantidade=no_atual['fim'], formato=formato))
+                    token = ''
+                
+                # Depois, processa os filhos (exceto 'fim')
+                #amarrado com try, caso entre por acidente em uma chave 'fim'
+                try:
+                    for chave, valor in no_atual.items():
+                        if chave != 'fim':
+                            pilha.append((valor, token + chave)) 
+                except AttributeError:
+                    pass
         return resposta

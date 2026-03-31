@@ -1,4 +1,3 @@
-# test_processamento_texto.py
 import unittest
 from pathlib import Path
 import tempfile
@@ -9,8 +8,7 @@ from unittest.mock import MagicMock
 
 from modulos.database.db_arquivos_textos import DatabaseArquivosTextos, ArquivoTextoObject
 from modulos.database.db_tokens import DatabaseTokens,TokenObject
-from modulos.tokenizador.modulos.processamento_texto_trie import ProcessamentoTextoTrie
-
+from modulos.tokenizador.modulos.processadores_texto.processamento_texto_trie import ProcessamentoTextoTrie
 
 
 
@@ -18,6 +16,25 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
     def __init__(self, methodName = "runTest"):
         super().__init__(methodName)        
         self._modelo_processamento = 'teste'
+        
+        self.dados_teste={
+            'texto_simples':{
+                'arvore': {'61': {'6d': {'6f': {'72': {'fim': 1}}, 'fim': 2, '61': {'72': {'fim': 1}}}}, '20': {'fim': 1}},
+                'lista': ['amor', ' ', 'amar']
+            },
+            'sufixos':{
+                'arvore':{'64': {'65': {'73': {'65': {'6d': {'70': {'72': {'65': {'67': {'6f': {'fim': 1}, 'fim': 3, '61': {'72': {'fim': 1}, 'fim': 2, '64': {'6f': {'fim': 1}}}}}}}}}}}}, '20': {'fim': 1}},
+                'lista':['desemprego', ' ', 'desempregar', ' ', 'desempregado']
+            },
+            'prefixos':{
+                'arvore':{'64': {'65': {'73': {'69': {'6c': {'75': {'64': {'69': {'72': {'fim': 1}, 'fim': 2, '64': {'6f': {'fim': 1}}}}, 'fim': 2, '73': {'61': {'6f': {'fim': 1}}}}}}}}}, '20': {'fim': 1}},
+                'lista':['desiludir', ' ', 'desiludido', ' ', 'desilusao']
+            },
+            'ambos':{
+                'arvore':{'64': {'65': {'73': {'69': {'6c': {'75': {'64': {'69': {'72': {'fim': 1}}}, 'fim': 2, '73': {'61': {'6f': {'fim': 1}}}}}}}}}, '20': {'fim': 1}, '69': {'6c': {'75': {'64': {'69': {'72': {'fim': 1}}}, 'fim': 2, '73': {'61': {'6f': {'fim': 1}}}}}}},
+                'lista':['desiludir', ' ', 'iludir', ' ', 'desilusao', ' ', 'ilusao']
+            },
+            'testes':['texto_simples', 'sufixos','prefixos','ambos'],}
     
     def setUp(self):
         """Configura o ambiente de teste antes de cada teste"""
@@ -57,15 +74,10 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
         """Testa se a classe inicializa corretamente em modo teste"""
         self.assertIsNotNone(self.CLASSE_TESTADA)
 
-    def teste_2(self):
-        """Testa se o split é feito corretamente em um caso válido - UTF-8"""
-        resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas('casa', 'utf-8')
-        self.assertEqual(resultado, ['casa'])
-
     def teste_3(self):
-        """Testa se o split é feito corretamente em um caso válido hex"""
+        """Testa se o split é feito corretamente em um caso válido """
         resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas('primeiro teste', 'hex')
-        self.assertEqual(resultado, ['7072696d6569726f','7465737465'])
+        self.assertEqual(resultado, ['primeiro',' ','teste'])
     
     def teste_4(self):
         """Testa se o split é feito corretamente em um caso inválido de formato"""
@@ -77,50 +89,27 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
         with self.assertRaises(ValueError):
             self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas('', 'utf-8')
     
-    def teste_5(self):
-        """Testa se é criada uma árvore trie no formato válido em utf-8"""
-        esperado = {'c': {'a': {'s': {'a': {'fim': 1}}}}}
-        resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_arvore_trie('casa', {}, 'utf-8')
-        self.assertEqual(resultado, esperado)
-    
     def teste_6(self):
-        """Testa se é criada uma árvore trie no formato válido com sufixo diferente em utf-8"""
-        esperado = {'a': {'m': {'o': {'r': {'fim': 1}}, 'fim': 2, 'a': {'r': {'fim': 1}}}}}
-        palavra = 'amor amar'
-        palavras = self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas(palavra, 'utf-8')
-        resultado = {}
-        for p in palavras:
-            resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_arvore_trie(p, resultado, 'utf-8')
-        self.assertEqual(resultado, esperado)
-    
-    def teste_6_1(self):
-            """Testa se é criada uma árvore trie no formato válido com varios sufixos em utf-8 sem incrementar o token"""
-            esperado = {'a': {'m': {'o': {'r': {'fim': 1}}, 'fim': 1, 'a': {'r': {'fim': 1}}}}}
-            palavra = 'amor amar'
-            palavras = self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas(palavra, 'utf-8')
+            """Testa se é criada uma árvore trie no formato válido com varios sufixos sem incrementar o token"""
+            esperado = {'61': {'6d': {'6f': {'72': {'fim': 1}}, 'fim': 1, '61': {'72': {'fim': 1}}}}, '20': {'fim': 1}}            
             resultado = {}
-            for p in palavras:
-                resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_arvore_trie(p, resultado, 'utf-8',False)
+            for p in ['amor', ' ', 'amar']:
+                resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_arvore_trie(palavra=p, arvore=resultado, contar_tokens=False)
             self.assertEqual(resultado, esperado)
-
     
     def teste_7(self):
         """Testa se é criada uma árvore trie no formato válido em hex"""
         esperado = {'63': {'61': {'73': {'61': {'fim': 1}}}}}
-        palavra = 'casa'
-        palavras = self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas(palavra, 'hex')
         resultado = {}
-        for p in palavras:
+        for p in ['casa']:
             resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_arvore_trie(p, {}, 'hex')
         self.assertEqual(resultado, esperado)
     
     def teste_8(self):
         """Testa se é criada uma árvore trie no formato válido com sufixo diferente em utf-8"""
-        esperado = {'61': {'6d': {'6f': {'72': {'fim': 1}}, 'fim': 2, '61': {'72': {'fim': 1}}}}}
-        palavra = 'amor amar'
-        palavras = self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas(palavra, 'hex')
+        esperado = {'61': {'6d': {'6f': {'72': {'fim': 1}}, 'fim': 2, '61': {'72': {'fim': 1}}}}, '20': {'fim': 1}}
         resultado = {}
-        for p in palavras:
+        for p in ['amor', ' ', 'amar']:
             resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_arvore_trie(p, resultado, 'hex')
         self.assertEqual(resultado, esperado)
     

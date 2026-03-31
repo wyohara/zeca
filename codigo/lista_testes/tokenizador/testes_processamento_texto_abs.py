@@ -9,7 +9,7 @@ from unittest.mock import MagicMock
 
 from modulos.database.db_arquivos_textos import DatabaseArquivosTextos, ArquivoTextoObject
 from modulos.database.db_tokens import DatabaseTokens,TokenObject
-from modulos.tokenizador.modulos.processamento_textos_abs import ProcessamentoDeTextoABS
+from modulos.tokenizador.modulos.processadores_texto.processamento_textos_abs import ProcessamentoDeTextoABS
 
 
 class ModeloConcretoTeste(ProcessamentoDeTextoABS):
@@ -94,9 +94,10 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
     def teste_6(self):
         """Testa erro no caso de não encontrar a pasta de arquivos de texto """
         dataset_dir = Path(self.temp_dir) / "dataset_test_erro"
-        self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = dataset_dir
-        lista_textos = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__get_lista_textos()
-        self.assertEqual(lista_textos, [])
+
+        with self.assertRaises(FileNotFoundError):
+            self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = dataset_dir
+            lista_textos = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__get_lista_textos()
 
     def teste_7(self):
         "Testa se ocorre erro ao tentar processar o dataset no formato errado"

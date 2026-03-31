@@ -103,7 +103,7 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
             tokens = []
 
             for r in resultado:
-                tokens.append(TokenObject(id=r[0], valor=r[1], quantidade=r[2], formato=r[3]))
+                tokens.append(TokenObject(id=r[0], valor_token=r[1], quantidade=r[2], formato=r[3]))
             return tokens
         except sqlite3.IntegrityError:
             return None

@@ -18,7 +18,7 @@ class ProcessamentoDeTextoABS(ABC):
         self._db_textos = DatabaseArquivosTextos(modo_teste=modo_teste)
         self._db_tokens = DatabaseTokens(modo_teste=modo_teste)
         self._ferramentas = FerramentasTokenizador()
-        self.__dataset = Path(__file__).parent / "dataset"
+        self.__dataset = Path(__file__).parent / '..' / '..'/ "dataset"
         self._modelo_processamento = ""
 
 
@@ -61,14 +61,11 @@ class ProcessamentoDeTextoABS(ABC):
         return:
             list[(str, str)]: contendo o caminho completo e o nome do arquivo
         '''
-        try:
-            dataset = []
-            for caminho in self.__dataset.iterdir():
-                if caminho.is_file():
-                    dataset.append((caminho, caminho.name))
-            return dataset
-        except FileNotFoundError:
-            return []
+        dataset = []
+        for caminho in self.__dataset.iterdir():
+            if caminho.is_file():
+                dataset.append((caminho, caminho.name))
+        return dataset
 
     @abstractmethod
     def _recortar_tokens(self, formato, texto) -> list[TokenObject]:

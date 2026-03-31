@@ -1,7 +1,7 @@
 import numpy as np
 
 from modulos.tokenizador.modulos.controlador_tokenizador import ControladorTokenizador
-from modulos.tokenizador.modulos.processamento_texto_trie import ProcessamentoTextoTrie
+from modulos.tokenizador.modulos.processadores_texto.processamento_texto_trie import ProcessamentoTextoTrie
 from modulos.embeding.embeding import Embeding
 from modulos.tokenizador.tokenizador import Tokenizador
 
