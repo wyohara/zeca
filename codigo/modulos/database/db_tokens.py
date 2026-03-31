@@ -53,6 +53,7 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
                   '&', '|', '^', '~', '<<', '>>',# Operadores bitwise
                   ':', ';', '@', '$', '`', ' ',# Símbolos e pontuação (apenas os que não estão nos originais)
                   '->', ':='# Outros operadores
+                  '\n', ' ', '\t'# Espaçadores
                 ]
         tks =[]
         for tk in TOKENS:
@@ -74,7 +75,37 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
         resposta = cursor.fetchone()[0]
         return resposta
     
+    def get_tokens_fixos(self, formato:str)-> list[TokenObject]:
+        '''
+        Recupera uma lista de tokens fixos do banco de dados
+            Args:
+                formato: formato dos tokens recuperados 'hex' e 'utf-8'
+            
+            Returns:
+                list[TokenObject]: lista de tokens
+                None: se houver violação de integridade.
+                -1: se formato inválido
+            
+            Raises:
+                sqlite3.IntegrityError: Se ocorrer um erro de banco de dados relacionado a integridade.
+                valueError: formato ou quantidade inválidos
+        '''        
+        try:
+            if formato not in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
+                raise ValueError
+            
+            cursor = self.db.cursor()
+            cursor.execute("SELECT * FROM Token WHERE formato=? AND token_fixo=1;", (formato,))
+            resultado = cursor.fetchall()
+            cursor.close()
+            tokens = []
 
+            for r in resultado:
+                tokens.append(TokenObject(id=r[0], valor_token=r[1], quantidade=r[2], formato=r[3], token_fixo=r[4]))
+            return tokens
+        except sqlite3.IntegrityError:
+            return None
+    
 
     def get_tokenObjects(self, formato:str, quantidade=10000)-> list[TokenObject]:
         '''
@@ -93,22 +124,20 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
                 valueError: formato ou quantidade inválidos
         '''        
         try:
-            if not (len(formato)>0 and isinstance(formato, str)):
+            if formato not in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
                 raise ValueError
             
             cursor = self.db.cursor()
-            cursor.execute("SELECT * FROM Token WHERE formato=? ORDER BY quantidade DESC LIMIT ?;", (formato, quantidade,))
+            cursor.execute("SELECT * FROM Token WHERE formato=? AND token_fixo=0 ORDER BY quantidade DESC LIMIT ?;", (formato, quantidade,))
             resultado = cursor.fetchall()
             cursor.close()
             tokens = []
 
             for r in resultado:
-                tokens.append(TokenObject(id=r[0], valor_token=r[1], quantidade=r[2], formato=r[3]))
+                tokens.append(TokenObject(id=r[0], valor_token=r[1], quantidade=r[2], formato=r[3], token_fixo=r[4]))
             return tokens
         except sqlite3.IntegrityError:
             return None
-        except ValueError:
-            return -1
     
     def get_lista_valores_tokens(self, formato:str)->list[str]:
         '''
@@ -122,7 +151,7 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
         lista_tokens = []
         
         if formato not in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
-            return -1
+            raise ValueError
         else:
             cursor = self.db.cursor()
             cursor.execute("SELECT valor_token FROM Token WHERE formato=? ORDER BY LENGTH(valor_token) DESC;", (formato,))
@@ -155,10 +184,10 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
             
             cursor = self.db.cursor()
             cursor.execute("SELECT * FROM Token WHERE valor_token=?;", (valor_token,))
-            resultado = cursor.fetchone()
+            res = cursor.fetchone()
             cursor.close()
 
-            return TokenObject(id=resultado[0], valor_token=resultado[1], quantidade=resultado[2], formato=resultado[3])
+            return TokenObject(id=res[0], valor_token=res[1], quantidade=res[2], formato=res[3], token_fixo=res[4])
         except sqlite3.IntegrityError:
             return None
         except ValueError:
@@ -189,8 +218,8 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
         try:
             cursor = self.db.cursor()
             sql = """
-                INSERT INTO Token (valor_token, quantidade, formato, token_fixo) 
-                VALUES (?, ?, ?, ?)
+                INSERT INTO Token (valor_token, quantidade, formato) 
+                VALUES (?, ?, ?)
                 ON CONFLICT(valor_token, formato) DO UPDATE SET
                     quantidade = quantidade + ? 
                 WHERE formato=?
@@ -201,13 +230,14 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
                 dados_bloco = []
                 
                 for tk in bloco:
+                    if tk.formato not in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
+                        raise ValueError
                     
-                    if tk.validar_formato() and tk.validar_quantidade() and tk.validar_valor_token():
+                    if tk.validar_quantidade() and tk.validar_valor_token():
                         dados_bloco.append((
                             tk.valor_token,
                             tk.quantidade,
                             tk.formato,
-                            tk.token_fixo,
                             tk.quantidade,
                             tk.formato
                         ))
@@ -222,8 +252,3 @@ class DatabaseTokens(DatabaseABS, FerramentasTokenizador):
             return resposta
         except sqlite3.IntegrityError:
             return None
-        except TypeError:
-            return -1
-        except ValueError:
-            return -2
-

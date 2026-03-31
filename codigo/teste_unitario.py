@@ -2,10 +2,12 @@ from lista_testes.database.teste_database_arquivo_textos import TesteDatabaseArq
 from lista_testes.database.teste_database_tokens import TesteDatabaseTokens
 from lista_testes.tokenizador.testes_processamento_texto_abs import TesteProcessamentoTextoABS
 from lista_testes.tokenizador.testes_processamento_texto_trie import TesteProcessamentoTextoTrie
+from lista_testes.tokenizador.teste_tokenizador import TesteTokenizador
 import unittest
 import sys
 
-TESTES = [TesteDatabaseArquivoTextos, TesteDatabaseTokens, TesteProcessamentoTextoABS, TesteProcessamentoTextoTrie]
+TESTES = [TesteDatabaseArquivoTextos, TesteDatabaseTokens, TesteProcessamentoTextoABS, 
+          TesteProcessamentoTextoTrie, TesteTokenizador]
 
 if __name__ == "__main__":
     for i, teste_suite in enumerate(TESTES):

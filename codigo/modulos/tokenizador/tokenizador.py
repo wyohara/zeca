@@ -1,5 +1,5 @@
 from modulos.tokenizador.modulos.processadores_texto.processamento_texto_trie import ProcessamentoTextoTrie
-from modulos.tokenizador.modulos.controlador_tokenizador import ControladorTokenizador
+from modulos.tokenizador.modulos.tokenizador import ControladorTokenizador
 from modulos.constantes.constante_tokenizador import CONST_TOKENIZADOR
 
 class Tokenizador():
