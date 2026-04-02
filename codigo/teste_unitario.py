@@ -9,6 +9,7 @@ import sys
 TESTES = [TesteDatabaseArquivoTextos, TesteDatabaseTokens, TesteProcessamentoTextoABS, 
           TesteProcessamentoTextoTrie, TesteTokenizador]
 
+
 if __name__ == "__main__":
     for i, teste_suite in enumerate(TESTES):
         teste = unittest.TestLoader().loadTestsFromTestCase(teste_suite)

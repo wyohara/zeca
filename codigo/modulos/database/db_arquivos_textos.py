@@ -1,5 +1,6 @@
 from datetime import date
 import sqlite3
+import json
 from modulos.database.database_abs import DatabaseABS
 from modulos.constantes.constante_tokenizador import ConstanteTokenizador
 
@@ -19,29 +20,46 @@ class ArquivoTextoObject():
         return f"Arquivo de texto do tipo ArquivoTextoObject\n\t>id {self.id} - '{self.nome}' e modelo '{self.modelo_processamento}'"
     
     def validar_nome(self):
-        return len(self.nome) > 0 and isinstance(self.nome, str)
+        try:
+            return len(self.nome) > 0 and isinstance(self.nome, str)
+        except Exception:
+            return False
     
     def validar_processamento(self):
         return self.modelo_processamento in ConstanteTokenizador.MODELO_PROCESSAMENTO.LISTA
 
 
-class DatabaseArquivosTextos(DatabaseABS):
+class DatabaseArquivosTextos():
     def __init__(self, modo_teste=False):
-        super().__init__(modo_teste)
+        self.__pasta_json = 'modulos/arquivo_dados/temp/arquivos_processados.json'
+        self.__arquivos = {}
+        # carregando os arquivos se existir
+        try:
+            with open(self.__pasta_json, 'r') as f:
+                self.__arquivos = json.load(f)
+        except FileNotFoundError:
+            self.__arquivos = {}
+    
+    def salvar_json(self, dados:dict):
+         #salvando a árvore em dicionário minificado
+        json_minificado = json.dumps(dados, separators=(',', ':'))
+        with open(self.__pasta_json, 'w') as f:
+            f.write(json_minificado)
 
     def get_lista_nomes_arquivos_processados(self, modelo_processamento='')->list[str]:
-        cursor = self.db.cursor()
-        if modelo_processamento != '':
-            cursor.execute("SELECT nome FROM ArquivoProcessado WHERE modelo_processamento=?", (modelo_processamento,))
-        else:
-            cursor.execute("SELECT nome FROM ArquivoProcessado")
+        '''
+        Método que retorna uma lista de arquivos processados
+        Args:
+            modelo_processamento: modelo usado para criar tokens
+        Return
+            list[str]: lista dos nomes dos textos
+        '''
+        if modelo_processamento not in ConstanteTokenizador.MODELO_PROCESSAMENTO.LISTA:
+            raise ValueError
 
-        resultado = cursor.fetchall()
-        cursor.close()
         nomes = []
-        for r in resultado:
-            nomes.append(r[0])
-        return nomes
+        for arquivo in self.__arquivos.keys():
+            nomes.append(arquivo)
     
     def set_arquivo_processado(self, arq_texto:ArquivoTextoObject) -> int:
         '''
@@ -61,30 +79,21 @@ class DatabaseArquivosTextos(DatabaseABS):
                 sqlite3.IntegrityError: Se ocorrer um erro de banco de dados relacionado a integridade.
                 ValueError: Se ocorrer um erro de integridade no objeto
         '''
-        try:
-            cursor = self.db.cursor()
-            valores = (arq_texto.nome, arq_texto.descricao, arq_texto.modelo_processamento)
-            
-            # caso insira um arquivo com id ocorre erro de integridade
-            if arq_texto.id >0:
-                raise sqlite3.IntegrityError
-            
-            # validando os campos de nome e arquivo processado
-            if not(arq_texto.validar_nome() and arq_texto.validar_processamento()):
-                raise ValueError
-                        
-            sql = "INSERT INTO ArquivoProcessado (nome, descricao, modelo_processamento) VALUES (?,?,?)"
-            cursor.execute(sql, valores)
-            self.db.commit()
-            resposta = cursor.lastrowid
-            cursor.close()
-            return resposta
-        except sqlite3.IntegrityError:
-            return 0
-        except ValueError:
-            return -1
+         # caso insira um arquivo com id ocorre erro de integridade
+        if arq_texto.id >0:
+            raise ValueError
         
-    def get_texto_processado(self, nome, modelo_processamento) -> ArquivoTextoObject:
+        # validando os campos de nome e arquivo processado
+        if not (arq_texto.validar_nome() and arq_texto.validar_processamento()):
+            raise ValueError
+        
+        if arq_texto.nome not in self.__arquivos.keys():
+            self.__arquivos[arq_texto.nome] = {'descricao': arq_texto.descricao, 'modelo_processamento': arq_texto.modelo_processamento}
+        
+        self.salvar_json(self.__arquivos)
+        return True
+        
+    def get_texto_processado(self, nome:str, modelo_processamento:str) -> ArquivoTextoObject:
         '''
         Busca um arquivo de texto processado pelo nome do arquivo e método de processamento.
             Args:
@@ -98,16 +107,13 @@ class DatabaseArquivosTextos(DatabaseABS):
             Raises:
                 sqlite3.IntegrityError: Se ocorrer um erro de banco de dados relacionado a integridade.
         '''
+        
         try:
-            cursor = self.db.cursor()
-            sql = "SELECT * FROM ArquivoProcessado WHERE nome=? and modelo_processamento=?"
-            cursor.execute(sql, (nome, modelo_processamento))
-            r = cursor.fetchone()
-            cursor.close()
-            if r is not None:
-                resultado = ArquivoTextoObject(r[0], r[1], r[2], r[3])
-                return resultado
+            arq = self.__arquivos[nome]
+            if arq['modelo_processamento'] == modelo_processamento:
+                return ArquivoTextoObject(nome=nome, descricao=arq['descricao'], modelo_processamento=arq['modelo_processamento'])
             else:
-                return None
-        except sqlite3.IntegrityError:
-            return 0
+                raise ValueError
+        except KeyError:
+            return None
+        

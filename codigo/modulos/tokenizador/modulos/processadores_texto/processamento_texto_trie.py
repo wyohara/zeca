@@ -1,8 +1,9 @@
 from modulos.tokenizador.modulos.processadores_texto.processamento_textos_abs import ProcessamentoDeTextoABS
 from modulos.constantes.constante_tokenizador import CONST_TOKENIZADOR
 from modulos.database.db_tokens import TokenObject
-from modulos.tokenizador.modulos.ferramentas_tokenizador import FerramentasTokenizador
+from modulos.tokenizador.modulos.ferramentas_tokenizador import FerramentasTokenizador as ft
 import re
+import json
 
 class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
     """
@@ -17,9 +18,16 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
     def __init__(self, modo_teste=False):
         super().__init__(modo_teste)
         self._modelo_processamento = CONST_TOKENIZADOR.MODELO_PROCESSAMENTO.TRIE
-        self.__arvore={}
+        self.__pasta_json = 'modulos/arquivo_dados/temp/arvore_trie.json'
+        
+        # carregando a árvore de trie se existir
+        try:
+            with open(self.__pasta_json, 'r') as f:
+                self.__arvore = json.load(f)
+        except FileNotFoundError:
+            self.__arvore = {}
 
-    def _recortar_tokens(self, texto:str, formato:str):    
+    def _recortar_tokens(self, texto:str):    
         """
         Método central que gerencia toda a criação da árvore de trier
         Percorre o corpus separando em palavras e aplica o processamento, após isso
@@ -33,20 +41,21 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
             list[TokenObject]: lista de objetos tokens
         """
 
-        #remontando a árvore de Trie para continuar
-        for tokens in self._db_tokens.get_lista_valores_tokens(formato):
-            self.__arvore = self.__montar_arvore_trie(tokens,self.__arvore, contar_tokens=False)
+        palavras = self.__get_palavras_recortadas(texto=texto)
 
-        palavras = self.__get_palavras_recortadas(texto=texto, formato=formato)
         #aplicando o algoritmo ao texto
         for i, palavra in enumerate(sorted(palavras, key=len, reverse=True)):
             self.__arvore = self.__montar_arvore_trie(palavra, self.__arvore)
 
-        resposta = self.__montar_lista_tokens(formato, self.__arvore)
-        return resposta
-        
 
-    def __get_palavras_recortadas(self, texto:str, formato:str)-> list[str]:
+        #salvando a árvore em dicionário minificado
+        json_minificado = json.dumps(self.__arvore, separators=(',', ':'))
+        with open(self.__pasta_json, 'w') as f:
+            f.write(json_minificado)
+
+        return self.__montar_lista_tokens(self.__arvore)
+    
+    def __get_palavras_recortadas(self, texto:str)-> list[str]:
         '''
         Método que recorta as palavras do texto e aplica as regras de modificação.
         O método quebra em espaços e monta a árvore em hexadecimal para escapar caracteres especiais
@@ -62,8 +71,6 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
         if not palavras:
             raise ValueError
         for palavra in palavras:
-            if formato.lower() not in CONST_TOKENIZADOR.FORMATO_TEXTO.LISTA:
-                raise ValueError
             lista_palavras.append(palavra)
         return lista_palavras
 
@@ -94,7 +101,7 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
         # cria o step do range, se for hex irá andar 2 bytes (1 char UNICODE) se utf-8 uma letra
         step = 1 
         for i in range(0,len(palavra), step):
-            letra = FerramentasTokenizador.converter_texto_para_hex(palavra[i:i+step])
+            letra = ft.texto_para_hex(palavra[i:i+step])
             # Cria o nó fim para uma bifurcação
             if letra not in no_atual :
                 # verifica se é raiz para não criar a chave fim no início da árvore
@@ -115,7 +122,7 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
         return arvore
 
     
-    def __montar_lista_tokens(self, formato:str, arvore:dict) -> list[TokenObject]:
+    def __montar_lista_tokens(self, arvore:dict) -> list[TokenObject]:
         """
         A partir do dicionário da Trie, retorna uma lista de TokenObject
         Params:
@@ -125,7 +132,7 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
         Returns:
             list[TokenObject]: lista de objetos de token para salvar no bd
         """
-        
+
         pilha = [[arvore, ""]]  # (nó_atual, token)
         resposta =[]
         while pilha:
@@ -135,9 +142,8 @@ class ProcessamentoTextoTrie (ProcessamentoDeTextoABS):
             if isinstance(no_atual, dict):          
                 if 'fim' in no_atual:
                     #caso utf-8 retorna para texto o hexadecimal
-                    if formato.lower() == CONST_TOKENIZADOR.FORMATO_TEXTO.UTF8:
-                        token = FerramentasTokenizador.converter_hex_para_texto(token)
-                    resposta.append(TokenObject(valor_token=token, quantidade=no_atual['fim'], formato=formato))
+                    ft.hex_para_texto
+                    resposta.append(TokenObject(valor_token=token, quantidade=no_atual['fim']))
                     token = ''
                 
                 # Depois, processa os filhos (exceto 'fim')

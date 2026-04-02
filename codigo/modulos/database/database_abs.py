@@ -6,18 +6,17 @@ CREATE TABLE IF NOT EXISTS ArquivoProcessado (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     nome TEXT NOT NULL,
     descricao TEXT,
-    modelo_processamento TEXT NOT NULL
+    modelo_processamento TEXT NOT NULL,
+    UNIQUE(nome, modelo_processamento)
 );
 """
 
 SQL_TABELA_TOKENS = """
 CREATE TABLE IF NOT EXISTS Token (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    valor_token TEXT NOT NULL,
+    valor_token TEXT NOT NULL UNIQUE,
     quantidade INTEGER NOT NULL,
-    formato TEXT,    
-    token_fixo BOOLEAN DEFAULT FALSE,
-    UNIQUE(valor_token, formato) 
+    token_fixo BOOLEAN DEFAULT FALSE
 );
 """
 
@@ -30,19 +29,26 @@ class DatabaseABS(ABC):
             if self.__modo_teste:
                 DatabaseABS._db_instance = sqlite3.connect(":memory:")
             else:
-                DatabaseABS._db_instance = sqlite3.connect("modulos/database.db")
-            DatabaseABS._db_instance.execute("PRAGMA journal_mode=WAL")  
+                DatabaseABS._db_instance = sqlite3.connect("modulos/database/database.db")
+                
+        DatabaseABS._db_instance.execute("PRAGMA journal_mode=WAL") 
         self.__db = DatabaseABS._db_instance
-        self.__criar_tabelas()
-    
-    @property
-    def db(self):
-        return self.__db
-    
-    def __criar_tabelas(self) -> None:
+
+        
         cursor = self.__db.cursor()
         cursor.execute(SQL_TABELA_ARQUIVOS_PROCESSADOS)
         cursor.execute(SQL_TABELA_TOKENS)
         cursor.close()
 
-        
+    @property
+    def fechar_db(self):
+        if self.__db is not None:
+            self.__db.close()
+            self.__db = None
+            DatabaseABS._db_instance = None
+            return True
+        return False
+    
+    @property
+    def db(self):
+        return self.__db

@@ -14,15 +14,15 @@ class ModeloConcretoTeste(ProcessamentoDeTextoABS):
     def __init__(self, modo_teste=True):
         super().__init__(modo_teste)
 
-    def _recortar_tokens(self, formato, texto):
-        return [TokenObject(0, 'tk1', 10, 'utf-8'),TokenObject(0, 'tk2', 10, 'utf-8')]
+    def _recortar_tokens(self, texto):
+        return [TokenObject(0, 'tk1', 10),TokenObject(0, 'tk2', 10)]
 
 
 
 class TesteProcessamentoTextoABS(unittest.TestCase):
     def __init__(self, methodName = "runTest"):
         super().__init__(methodName)        
-        self._modelo_processamento = 'teste'
+        self._modelo_processamento = 'trie'
     
     def setUp(self):
         """Configura o ambiente de teste antes de cada teste"""
@@ -49,7 +49,7 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
         
         # Substitui o caminho do dataset - sempre a classe original no caso a abstrata
         self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = self.dataset_dir
-        self.CLASSE_TESTADA._modelo_processamento = "abs"
+        self.CLASSE_TESTADA._modelo_processamento = "trie"
 
         self.CLASSE_TESTADA._db_textos.set_arquivo_processado(ArquivoTextoObject(0,'texto1.txt','','trie'))
     
@@ -84,7 +84,7 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
     
     def teste_5(self):
         """Verifica se o método abstrato _recortar_tokens retorna o valor esperado """
-        res = self.CLASSE_TESTADA._recortar_tokens('texto1.txt', 'hex')
+        res = self.CLASSE_TESTADA._recortar_tokens('texto1.txt')
         self.assertEqual(len(res), 2)
         self.assertEqual(res[0].valor_token, 'tk1')
         self.assertEqual(res[1].valor_token, 'tk2')
@@ -96,20 +96,10 @@ class TesteProcessamentoTextoABS(unittest.TestCase):
         with self.assertRaises(FileNotFoundError):
             self.CLASSE_TESTADA._ProcessamentoDeTextoABS__dataset = dataset_dir
             lista_textos = self.CLASSE_TESTADA._ProcessamentoDeTextoABS__get_lista_textos()
-
-    def teste_7(self):
-        "Testa se ocorre erro ao tentar processar o dataset no formato errado"
-        with self.assertRaises(ValueError):
-            self.CLASSE_TESTADA.processar_dataset_textos(formato='hx', status=True)
     
     def teste_8(self):
-        "Testa se processa em utf-8"
-        res = self.CLASSE_TESTADA.processar_dataset_textos(formato='utf-8', status=True)
+        res = self.CLASSE_TESTADA.processar_dataset_textos(status=True)
         self.assertEqual(res, True)
 
-    def teste_9(self):
-        "Testa se processa em hex"
-        res = self.CLASSE_TESTADA.processar_dataset_textos(formato='hex', status=True)
-        self.assertEqual(res, True)
         
         

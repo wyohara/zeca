@@ -74,7 +74,7 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
 
     def teste_3(self):
         """Testa se o split é feito corretamente em um caso válido """
-        resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas('primeiro teste', 'hex')
+        resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas('primeiro teste')
         self.assertEqual(resultado, ['primeiro',' ','teste'])
     
     def teste_4(self):
@@ -85,7 +85,7 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
     def teste_4(self):
         """Testa se o split é feito corretamente em um caso de texto vazio"""
         with self.assertRaises(ValueError):
-            self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas('', 'utf-8')
+            self.CLASSE_TESTADA._ProcessamentoTextoTrie__get_palavras_recortadas('')
     
     def teste_6(self):
             """Testa se é criada uma árvore trie no formato válido com varios sufixos sem incrementar o token"""
@@ -115,21 +115,20 @@ class TesteProcessamentoTextoTrie(unittest.TestCase):
         """Testa se é criada uma lista de objetos validos"""
         dicionario_base = {'c': {'a': {'s': {'a': {'fim': 1}}}}}
         esperado = ['casa']
-        resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_lista_tokens(dicionario_base, 'utf-8')
+        resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_lista_tokens(dicionario_base)
 
         for r in resultado:
             self.assertTrue(r.valor_token in esperado)
             self.assertTrue(r.quantidade > 0)
-            self.assertEqual(r.formato, 'utf-8')
+            
     
     def teste_10(self):
         """Testa se é criada uma lista de objetos validos com sufixo diferente"""
         dicionario_base = {'a': {'m': {'o': {'r': {'fim': 1}}, 'fim': 2, 'a': {'r': {'fim': 1}}}}}
-        esperado = ['am', 'r', 'ar']
-        resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_lista_tokens(dicionario_base, 'utf-8')
+        esperado = ['am', 'or', 'ar']
+        resultado = self.CLASSE_TESTADA._ProcessamentoTextoTrie__montar_lista_tokens(dicionario_base)
         for r in resultado:
             self.assertTrue(r.valor_token in esperado)
             self.assertTrue(r.quantidade > 0)
-            self.assertEqual(r.formato, 'utf-8')
     
     

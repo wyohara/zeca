@@ -1,6 +1,7 @@
 from typing import Literal
 from abc import ABC, abstractmethod
 from pathlib import Path
+import sys
 
 from modulos.tokenizador.modulos.ferramentas_tokenizador import FerramentasTokenizador
 from modulos.database.db_arquivos_textos import DatabaseArquivosTextos, ArquivoTextoObject
@@ -18,11 +19,11 @@ class ProcessamentoDeTextoABS(ABC):
         self._db_textos = DatabaseArquivosTextos(modo_teste=modo_teste)
         self._db_tokens = DatabaseTokens(modo_teste=modo_teste)
         self._ferramentas = FerramentasTokenizador()
-        self.__dataset = Path(__file__).parent / '..' / '..'/ "dataset"
+        self.__dataset = Path(sys.argv[0]).parent  / 'modulos' / "arquivo_dados" / "dataset"
         self._modelo_processamento = ""
 
 
-    def processar_dataset_textos(self, formato: str, status:bool):
+    def processar_dataset_textos(self, status:bool):
         '''
         Método que carrega e processa os arquivos de texto
             Args:
@@ -36,9 +37,7 @@ class ProcessamentoDeTextoABS(ABC):
                 ValueError: formato diferente de hex ou utf-8
 
         '''
-        if formato not in CONST_TOKENIZADOR.FORMATO_TEXTO.LISTA:
-            raise ValueError
-        
+        lista_tokens = []
         #verifica se o texto do path de dataset já foi processado
         for caminho, nome_texto in self.__get_lista_textos():
                 if not self.__is_texto_processado(nome_texto, self._modelo_processamento):
@@ -48,11 +47,11 @@ class ProcessamentoDeTextoABS(ABC):
                     arq = open(caminho, "r", encoding="utf-8")
                     texto = arq.read()
                     arq.close()                    
-                    lista_tokens = self._recortar_tokens(formato=formato, texto=texto)
-
-                    #salvando os dados
+                    lista_tokens = self._recortar_tokens(texto=texto)
+                    #salvando os tokens
                     self._db_tokens.inserir_tokens(lista_tokens=lista_tokens)
-                    self._db_textos.set_arquivo_processado(ArquivoTextoObject(0,nome_texto,'',self._modelo_processamento))
+                    self._db_textos.set_arquivo_processado(ArquivoTextoObject(0,nome=nome_texto, descricao='', modelo_processamento=self._modelo_processamento))
+        
         return True
     
     def __get_lista_textos(self)->list[(str, str)]:
@@ -68,7 +67,7 @@ class ProcessamentoDeTextoABS(ABC):
         return dataset
 
     @abstractmethod
-    def _recortar_tokens(self, formato, texto) -> list[TokenObject]:
+    def _recortar_tokens(self, texto) -> list[TokenObject]:
          """
          Método abstrato que realiza os recortes de tokens, ele é implementado em cada algoritmo de tokenização
          """

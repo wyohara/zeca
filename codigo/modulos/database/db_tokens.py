@@ -1,20 +1,20 @@
 from datetime import date
 import sqlite3
+import json
 from modulos.database.database_abs import DatabaseABS
 from modulos.constantes.constante_tokenizador import ConstanteTokenizador
-from modulos.tokenizador.modulos.ferramentas_tokenizador import FerramentasTokenizador
+from modulos.tokenizador.modulos.ferramentas_tokenizador import FerramentasTokenizador as ft
 
 
 class TokenObject():
-    def __init__(self, id=0, valor_token='', quantidade=0, formato='',token_fixo=0):
+    def __init__(self, id=0, valor_token='', quantidade=0,token_fixo=0):
         self.id=id
         self.valor_token=valor_token
         self.quantidade=quantidade
-        self.formato=formato
         self.token_fixo=token_fixo
     
     def __str__(self):
-        return f"Arquivo de tokens tipo TokenObject\n\t>id {self.id} - '{self.valor_token}', modelo '{self.quantidade}', formato '{self.formato}'"
+        return f"Arquivo de tokens tipo TokenObject\n\t>id {self.id} - '{self.valor_token}', modelo '{self.quantidade}'"
     
     def get_tamanho_token(self):
         return len(self.valor_token)
@@ -24,28 +24,45 @@ class TokenObject():
     
     def validar_quantidade(self):        
         return self.quantidade>0 and isinstance(self.quantidade, int)
-    
-    def validar_formato(self):        
-        return self.formato in ConstanteTokenizador.FORMATO_TEXTO.LISTA
 
 
-class DatabaseTokens(DatabaseABS):
+class DatabaseTokens():
     def __init__(self, modo_teste=False):
         '''
         Classe que controla a database de tokens
             Args:
                 modo_teste: define se o banco de dados será no modo teste (em memória)
         '''
-        super().__init__(modo_teste)
-        self.__definir_tokens_fixos()
-
+        self.__pasta_json = 'modulos/arquivo_dados/temp/tokens.json'
+        self.__tokens = {}
+        try:
+            self.__contador = self.__tokens['contador']
+        except KeyError:
+            self.__contador = self.__tokens['contador']=0
+        # carregando os arquivos se existir
+        try:
+            with open(self.__pasta_json, 'r') as f:
+                self.__tokens = json.load(f)
+        except FileNotFoundError:
+            self.__tokens = {}
+            self.__definir_tokens_fixos()
+        
+    def salvar_json(self, dados:dict):
+         #salvando a árvore em dicionário minificado
+        json_minificado = json.dumps(dados, separators=(',', ':'))
+        with open(self.__pasta_json, 'w') as f:
+            f.write(json_minificado)
+    
     def __definir_tokens_fixos(self)->int:
+        '''
+        Método que cria os tokens fixos obrigatórios
+        '''
         TOKENS = [',', '?', '!', '{', '}', '[', ']', '(', ')', ';', '_', '/', '|', '@', '#', '\'', '’', '"', '”', '-', '—', '...', '.',# Originais (sem duplicar com os que vêm depois)
                   'a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i', 'j', 'k', 'l', 'm',# Letras minúsculas
                   'n', 'o', 'p', 'q', 'r', 's', 't', 'u', 'v', 'w', 'x', 'y', 'z',
                   'A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M',# Letras maiúsculas
                   'N', 'O', 'P', 'Q', 'R', 'S', 'T', 'U', 'V', 'W', 'X', 'Y', 'Z',
-                  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',# Números
+                  '0', '1', '2', '3', '4', '5', '6', '7', '8', '9',# Números                  
                   '+', '-', '*', '/', '%', '**', '//', # Operadores aritméticos
                   '==', '!=', '<', '>', '<=', '>=',# Operadores de comparação
                   'and', 'or', 'not',# Operadores lógicos
@@ -55,31 +72,20 @@ class DatabaseTokens(DatabaseABS):
                   '->', ':='# Outros operadores
                   '\n', ' ', '\t'# Espaçadores
                 ]
-        tks =[]
-        for tk in TOKENS:
-            for form in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
-                if form ==ConstanteTokenizador.FORMATO_TEXTO.HEX:
-                    tk = FerramentasTokenizador.converter_texto_para_hex(tk)
-                elif form ==ConstanteTokenizador.FORMATO_TEXTO.UTF8:
-                    tk = FerramentasTokenizador.converter_hex_para_texto(tk)
-                tks.append((tk, 1, form, True))
-        cursor = self.db.cursor()
-        sql = """INSERT INTO Token (valor_token, quantidade, formato, token_fixo) VALUES (?, ?, ?, ?)
-                ON CONFLICT(valor_token, formato) DO UPDATE SET
-                    quantidade = 1 ;"""
-        cursor.executemany(sql, tks)
-        self.db.commit()
+        
+        self.__tokens['tokens_fixos']={}
+        fixo = self.__tokens['tokens_fixos']
 
-        # Obtém o último ID inserido/afetado para evitar conflito 
-        cursor.execute("SELECT last_insert_rowid()")
-        resposta = cursor.fetchone()[0]
-        return resposta
+        for tk in TOKENS:
+            self.__contador+=1
+            fixo[ft.texto_para_hex(tk)]={'quantidade':1, 'token_fixo':1, 'id':self.__contador}
+        
+        self.salvar_json(self.__tokens)
     
-    def get_tokens_fixos(self, formato:str)-> list[TokenObject]:
+    def get_tokens_fixos(self,)-> list[TokenObject]:
         '''
         Recupera uma lista de tokens fixos do banco de dados
             Args:
-                formato: formato dos tokens recuperados 'hex' e 'utf-8'
             
             Returns:
                 list[TokenObject]: lista de tokens
@@ -90,28 +96,18 @@ class DatabaseTokens(DatabaseABS):
                 sqlite3.IntegrityError: Se ocorrer um erro de banco de dados relacionado a integridade.
                 valueError: formato ou quantidade inválidos
         '''        
-        try:
-            if formato not in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
-                raise ValueError
-            
-            cursor = self.db.cursor()
-            cursor.execute("SELECT * FROM Token WHERE formato=? AND token_fixo=1;", (formato,))
-            resultado = cursor.fetchall()
-            cursor.close()
-            tokens = []
 
-            for r in resultado:
-                tokens.append(TokenObject(id=r[0], valor_token=r[1], quantidade=r[2], formato=r[3], token_fixo=r[4]))
-            return tokens
-        except sqlite3.IntegrityError:
-            return None
+        tokens = []
+        for tk in self.__tokens['tokens_fixos'].keys():
+            tk_fixo = self.__tokens['tokens_fixos'][tk]
+            tokens.append(TokenObject(id=tk_fixo['id'],valor_token=tk, quantidade=tk_fixo['quantidade'], token_fixo=tk_fixo['token_fixo']))
+        return tokens
     
 
-    def get_tokenObjects(self, formato:str, quantidade=10000)-> list[TokenObject]:
+    def get_tokenObjects(self, quantidade=10000)-> list[TokenObject]:
         '''
         Recupera uma lista de tokens do banco de dados
             Args:
-                formato: formato dos tokens recuperados 'hex' e 'utf-8'
                 quantidade: tamanho do bloco de tokens recuperado
             
             Returns:
@@ -124,43 +120,32 @@ class DatabaseTokens(DatabaseABS):
                 valueError: formato ou quantidade inválidos
         '''        
         try:
-            if formato not in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
-                raise ValueError
-            
-            cursor = self.db.cursor()
-            cursor.execute("SELECT * FROM Token WHERE formato=? AND token_fixo=0 ORDER BY quantidade DESC LIMIT ? ;", (formato, quantidade,))
-            resultado = cursor.fetchall()
-            cursor.close()
-            tokens = []
+            resultado_parcial = []
+            for chave, valor in self.__tokens['tokens'].items():
+                resultado_parcial.append((chave, valor['quantidade'], valor['token_fixo'], valor['id']))
+            resultado_parcial =  sorted(resultado_parcial, key=lambda x: x[1], reverse=True)
 
-            for r in resultado:
-                tokens.append(TokenObject(id=r[0], valor_token=r[1], quantidade=r[2], formato=r[3], token_fixo=r[4]))
-            return tokens
-        except sqlite3.IntegrityError:
-            return None
+            resultado =[]
+            for i in range(quantidade):
+                r = resultado_parcial[i]
+                resultado.append(TokenObject(valor_token=r[0], quantidade=r[1], token_fixo=r[2], id=r[3]))
+            return resultado
+        except KeyError:
+            return []
     
-    def get_lista_valores_tokens(self, formato:str)->list[str]:
+    def get_lista_valores(self)->list[str]:
         '''
         Método que retorna uma lista de tokens do banco de dados ordenados do maior para o menor por formato
 
         Params:
-            formato: formato hex ou utf-8
+        
         Return:
             list[str]: lista de tokens ordenados do maior para o menor
         '''
-        lista_tokens = []
-        
-        if formato not in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
-            raise ValueError
-        else:
-            cursor = self.db.cursor()
-            cursor.execute("SELECT valor_token FROM Token WHERE formato=? ORDER BY LENGTH(valor_token) DESC;", (formato,))
-            resultado = cursor.fetchall()
-            cursor.close()
-
-            for r in resultado:
-                lista_tokens.append(r[0])
-            return lista_tokens
+        tokens = []
+        tokens.extend(list(self.__tokens['tokens_fixos'].keys()))
+        tokens.extend(list(self.__tokens['tokens'].keys()))
+        return tokens
 
     
     def get_token(self, valor_token:str)->TokenObject:
@@ -178,23 +163,25 @@ class DatabaseTokens(DatabaseABS):
                 sqlite3.IntegrityError: Se ocorrer um erro de banco de dados relacionado a integridade.
                 valueError: formato ou quantidade inválidos
         '''
-        try:
-            if not (len(valor_token)>0 and isinstance(valor_token, str)):
-                raise ValueError
-            
-            cursor = self.db.cursor()
-            cursor.execute("SELECT * FROM Token WHERE valor_token=?;", (valor_token,))
-            res = cursor.fetchone()
-            cursor.close()
 
-            return TokenObject(id=res[0], valor_token=res[1], quantidade=res[2], formato=res[3], token_fixo=res[4])
-        except sqlite3.IntegrityError:
-            return None
-        except ValueError:
-            return -1
+        if valor_token in self.__tokens['tokens_fixos'].keys():
+            tk = self.__tokens['tokens_fixos'][valor_token]
+            return(TokenObject(valor_token=valor_token, 
+                               quantidade=tk['quantidade'],
+                               token_fixo=tk['token_fixo'],
+                               id=tk['id']
+                               ))
+        if valor_token in self.__tokens['tokens'].keys():
+            tk = self.__tokens['tokens'][valor_token]
+            return(TokenObject(valor_token=valor_token, 
+                               quantidade=tk['quantidade'],
+                               token_fixo=tk['token_fixo'],
+                               id=tk['id']
+                               ))
+        return None
 
 
-    def inserir_tokens(self, lista_tokens:list[TokenObject], tam_bloco=1000):
+    def inserir_tokens(self, lista_tokens:list[TokenObject]):
         '''
         Insere uma lista de tokens no banco de dados de arquivos processados.
             Args:
@@ -215,40 +202,16 @@ class DatabaseTokens(DatabaseABS):
                 TypeError: Se ocorrer a informação não estiver em uma lista.
                 ValueError: Erro de integridade nos objetos
         '''
-        try:
-            cursor = self.db.cursor()
-            sql = """
-                INSERT INTO Token (valor_token, quantidade, formato) 
-                VALUES (?, ?, ?)
-                ON CONFLICT(valor_token, formato) DO UPDATE SET
-                    quantidade = quantidade + ? 
-                WHERE formato=?
-            """
-            
-            for i in range(0, len(lista_tokens), tam_bloco):
-                bloco = lista_tokens[i:i + tam_bloco]
-                dados_bloco = []
-                
-                for tk in bloco:
-                    if tk.formato not in ConstanteTokenizador.FORMATO_TEXTO.LISTA:
-                        raise ValueError
-                    
-                    if tk.validar_quantidade() and tk.validar_valor_token():
-                        dados_bloco.append((
-                            tk.valor_token,
-                            tk.quantidade,
-                            tk.formato,
-                            tk.quantidade,
-                            tk.formato
-                        ))
-                    else:
-                        raise ValueError  
-                cursor.executemany(sql, dados_bloco)
-            self.db.commit()
+        self.__tokens['tokens']={}
+        tk_opcional = self.__tokens['tokens']
 
-            # Obtém o último ID inserido/afetado para evitar conflito 
-            cursor.execute("SELECT last_insert_rowid()")
-            resposta = cursor.fetchone()[0]
-            return resposta
-        except sqlite3.IntegrityError:
-            return None
+        for tk in lista_tokens:
+            self.__contador +=1
+            chave = (tk.valor_token)
+            if tk.valor_token in tk_opcional.keys():      
+                tk_opcional[chave]['quantidade'] += tk.quantidade
+            else:
+                tk_opcional[chave] = {'quantidade':tk.quantidade, 'token_fixo':tk.token_fixo, 'id':self.__contador}
+        
+        self.salvar_json(self.__tokens)
+        return True        
